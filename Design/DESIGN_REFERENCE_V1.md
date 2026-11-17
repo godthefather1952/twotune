@@ -8,7 +8,7 @@
 - Main focus: the user's original 3D emoji-like, laurel-crowned Zeus character (NOT photorealistic), centered and holding the lightning.
 - Zeus's lightning is **the actual retune pointer**, not merely decoration. Do NOT show a second dial pointer that can disagree with it.
 - One 270-degree arc surrounding Zeus. Gold fill follows the bolt tip exactly, with a brass/ivory inactive segment.
-- Key selector on left, Scale selector on right; single gold percentage readout beneath Zeus.
+- Key selector on left, Scale selector on right. **Do not show a numeric percentage readout on the main master knob**; communicate tuning intensity through Zeus, the lightning direction, and the illuminated gold arc. Numeric Retune Speed (ms) may appear in the Advanced panel or as an accessibility/automation value.
 - Top-left power/bypass (must truly bypass audio before enabled). Top-right settings/advanced panel, where the non-core controls live.
 - Keep default screen simple: Retune, Key, Scale, Power, Settings. Presets and custom-scale keyboard live in advanced settings.
 
@@ -24,7 +24,7 @@ Existing VST3 automation parameter named retune stays in **0..250 milliseconds**
 | 100% | 0.00 | lower-right (hard tune) |
 
 The precise cubic mapping and angles are defined only in Source/Plugin/RetuneDialMapping.h.
-Lightning bolt endpoint, gold arc fill, displayed percentage, pointer hit target and value sent to the DAW **must use the same mapping**. Increasing intensity reduces retune milliseconds. Mouse-drag around arc, mouse-wheel, double-click reset, automation, and project recall must work.
+Lightning bolt endpoint, gold arc fill, internal intensity value, pointer hit target and value sent to the DAW **must use the same mapping**. The internal percent is for calculations only, not a visible master-knob label. Increasing intensity reduces retune milliseconds. Mouse-drag around arc, mouse-wheel, double-click reset, automation, and project recall must work.
 
 ### Implementation notes
 - Current LightningRetuneDial.h is a reusable JUCE proof of interaction, **not integrated into PluginEditor yet**. It draws a temporary ZEUS medallion until art is layered; it is not a finished visual.
@@ -33,3 +33,8 @@ Lightning bolt endpoint, gold arc fill, displayed percentage, pointer hit target
 - Full 30–60 FPS animation is unnecessary; update the UI only when parameters change. Avoid image decoding/allocations and rendering on the audio thread. Prefer cached, modest-resolution UI assets.
 - The currently uploaded flat reference picture is a *visual target*, not a set of separately interactive components.
 - This design work does not claim the retune DSP, latency, or DAW CPU issues have been resolved.
+
+## Refined sprite-pack handoff
+- Nine exported transparent, matching-canvas Zeus + lightning sprite frames (no labels, percent badges, or background baked into them).
+- Draw the dial arc as its own layer and keep it independently animated; never flatten it into the sprites.
+- The 50% raised-lightning frame has a registered arc preview where the illuminated fill touches the lightning tip. At other values, the static frame tips still need final geometric calibration / animation rig work before claiming continuous pointer tracking.

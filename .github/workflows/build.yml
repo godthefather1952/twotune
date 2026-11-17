@@ -6,7 +6,7 @@ jobs:
   dsp-tests:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure standalone DSP tests
         run: cmake -S . -B build-dsp -DEVOLUTIONVOX_BUILD_PLUGIN=OFF -DEVOLUTIONVOX_BUILD_TESTS=ON
       - name: Build
@@ -25,15 +25,26 @@ jobs:
             artifact: EvolutionVox-Windows-VST3
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DEVOLUTIONVOX_BUILD_PLUGIN=ON -DEVOLUTIONVOX_BUILD_TESTS=ON
       - name: Build
         run: cmake --build build --config Release --parallel 4
-      - name: Test
+      - name: Test (DSP, dial mapping, Zeus rig, processor + editor)
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: Editor screenshots and offline timing
+        shell: bash
+        run: |
+          mkdir -p ci-screenshots
+          app=$(find build/EvolutionVoxPluginTests_artefacts -type f \( -name EvolutionVoxPluginTests -o -name EvolutionVoxPluginTests.exe \) | head -1)
+          "$app" --screenshots ci-screenshots --bench | tee ci-screenshots/plugin_tests.txt
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.artifact }}-screenshots
+          path: ci-screenshots
       - name: Upload VST3 artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact }}
           path: build/EvolutionVox_artefacts/**/VST3/**

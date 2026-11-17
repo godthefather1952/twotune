@@ -43,6 +43,7 @@ public:
         return true;
     }
     PitchObservation latest() const noexcept { return latest_; }
+    int hopSamples() const noexcept { return hop_; }
 
 private:
     static constexpr int kWindow = 768;

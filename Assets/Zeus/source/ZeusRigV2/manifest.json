@@ -1,0 +1,243 @@
+{
+  "version": "2.0-preview",
+  "purpose": "Separate arm, character, and independent complete lightning layers; master knob no percentage text",
+  "frames": [
+    {
+      "frame": 1,
+      "intensity": 0,
+      "name": "sleeping",
+      "armAnchor": {
+        "x": 532.3,
+        "y": 513.18
+      },
+      "lightningTip": {
+        "x": 459.28,
+        "y": 713.8
+      },
+      "lightningAngleDegrees": 110,
+      "canvas": [
+        1280,
+        800
+      ],
+      "assetPaths": {
+        "character": "characters/complete_no_bolt/zeus_01.png",
+        "base": "characters/base_without_active_arm/zeus_01.png",
+        "arm": "characters/active_arm/zeus_01.png",
+        "lightning": "lightning/independent/lightning_01.png",
+        "composite": "composites/pose_01.png"
+      }
+    },
+    {
+      "frame": 2,
+      "intensity": 12,
+      "name": "waking",
+      "armAnchor": {
+        "x": 460.32,
+        "y": 450.96
+      },
+      "lightningTip": {
+        "x": 385.21,
+        "y": 657.32
+      },
+      "lightningAngleDegrees": 110,
+      "canvas": [
+        1280,
+        800
+      ],
+      "assetPaths": {
+        "character": "characters/complete_no_bolt/zeus_02.png",
+        "base": "characters/base_without_active_arm/zeus_02.png",
+        "arm": "characters/active_arm/zeus_02.png",
+        "lightning": "lightning/independent/lightning_02.png",
+        "composite": "composites/pose_02.png"
+      }
+    },
+    {
+      "frame": 3,
+      "intensity": 25,
+      "name": "focused",
+      "armAnchor": {
+        "x": 420.06,
+        "y": 446.08
+      },
+      "lightningTip": {
+        "x": 343.28,
+        "y": 657.02
+      },
+      "lightningAngleDegrees": 110,
+      "canvas": [
+        1280,
+        800
+      ],
+      "assetPaths": {
+        "character": "characters/complete_no_bolt/zeus_03.png",
+        "base": "characters/base_without_active_arm/zeus_03.png",
+        "arm": "characters/active_arm/zeus_03.png",
+        "lightning": "lightning/independent/lightning_03.png",
+        "composite": "composites/pose_03.png"
+      }
+    },
+    {
+      "frame": 4,
+      "intensity": 37,
+      "name": "lifting",
+      "armAnchor": {
+        "x": 494.48,
+        "y": 219.16
+      },
+      "lightningTip": {
+        "x": 583.26,
+        "y": 37.14
+      },
+      "lightningAngleDegrees": -64,
+      "canvas": [
+        1280,
+        800
+      ],
+      "assetPaths": {
+        "character": "characters/complete_no_bolt/zeus_04.png",
+        "base": "characters/base_without_active_arm/zeus_04.png",
+        "arm": "characters/active_arm/zeus_04.png",
+        "lightning": "lightning/independent/lightning_04.png",
+        "composite": "composites/pose_04.png"
+      }
+    },
+    {
+      "frame": 5,
+      "intensity": 50,
+      "name": "raised",
+      "armAnchor": {
+        "x": 473.74,
+        "y": 209.4
+      },
+      "lightningTip": {
+        "x": 473.74,
+        "y": -19.96
+      },
+      "lightningAngleDegrees": -90,
+      "canvas": [
+        1280,
+        800
+      ],
+      "assetPaths": {
+        "character": "characters/complete_no_bolt/zeus_05.png",
+        "base": "characters/base_without_active_arm/zeus_05.png",
+        "arm": "characters/active_arm/zeus_05.png",
+        "lightning": "lightning/independent/lightning_05.png",
+        "composite": "composites/pose_05.png"
+      }
+    },
+    {
+      "frame": 6,
+      "intensity": 62,
+      "name": "aiming",
+      "armAnchor": {
+        "x": 725.06,
+        "y": 270.4
+      },
+      "lightningTip": {
+        "x": 907.72,
+        "y": 127.69
+      },
+      "lightningAngleDegrees": -38,
+      "canvas": [
+        1280,
+        800
+      ],
+      "assetPaths": {
+        "character": "characters/complete_no_bolt/zeus_06.png",
+        "base": "characters/base_without_active_arm/zeus_06.png",
+        "arm": "characters/active_arm/zeus_06.png",
+        "lightning": "lightning/independent/lightning_06.png",
+        "composite": "composites/pose_06.png"
+      }
+    },
+    {
+      "frame": 7,
+      "intensity": 75,
+      "name": "charging",
+      "armAnchor": {
+        "x": 787.28,
+        "y": 276.5
+      },
+      "lightningTip": {
+        "x": 1057.61,
+        "y": 228.83
+      },
+      "lightningAngleDegrees": -10,
+      "canvas": [
+        1280,
+        800
+      ],
+      "assetPaths": {
+        "character": "characters/complete_no_bolt/zeus_07.png",
+        "base": "characters/base_without_active_arm/zeus_07.png",
+        "arm": "characters/active_arm/zeus_07.png",
+        "lightning": "lightning/independent/lightning_07.png",
+        "composite": "composites/pose_07.png"
+      }
+    },
+    {
+      "frame": 8,
+      "intensity": 87,
+      "name": "striking",
+      "armAnchor": {
+        "x": 775.08,
+        "y": 276.5
+      },
+      "lightningTip": {
+        "x": 1085.42,
+        "y": 254.8
+      },
+      "lightningAngleDegrees": -4,
+      "canvas": [
+        1280,
+        800
+      ],
+      "assetPaths": {
+        "character": "characters/complete_no_bolt/zeus_08.png",
+        "base": "characters/base_without_active_arm/zeus_08.png",
+        "arm": "characters/active_arm/zeus_08.png",
+        "lightning": "lightning/independent/lightning_08.png",
+        "composite": "composites/pose_08.png"
+      }
+    },
+    {
+      "frame": 9,
+      "intensity": 100,
+      "name": "max_tune",
+      "armAnchor": {
+        "x": 777.52,
+        "y": 278.94
+      },
+      "lightningTip": {
+        "x": 1161.82,
+        "y": 278.94
+      },
+      "lightningAngleDegrees": 0,
+      "canvas": [
+        1280,
+        800
+      ],
+      "assetPaths": {
+        "character": "characters/complete_no_bolt/zeus_09.png",
+        "base": "characters/base_without_active_arm/zeus_09.png",
+        "arm": "characters/active_arm/zeus_09.png",
+        "lightning": "lightning/independent/lightning_09.png",
+        "composite": "composites/pose_09.png"
+      }
+    }
+  ],
+  "renderOrder": [
+    "background",
+    "base",
+    "lightning",
+    "arm"
+  ],
+  "notes": [
+    "The new no-bolt character source is regenerated, not pixel-identical to the earlier approved character poses.",
+    "The arm is separable as a per-frame layer, but the shoulder underpainting is not a physically rigged 3D joint. A pose-to-pose sprite transition is recommended.",
+    "Lightning is original procedural vector-style artwork rasterized to independent transparent PNG; the final strike tip is complete.",
+    "The 9 poses still require manual final art direction and registration to the plugin dial arc before calling this a release production rig."
+  ]
+}

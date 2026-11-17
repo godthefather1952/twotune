@@ -1,0 +1,437 @@
+{
+  "generatedBy": "tools/build_zeus_assets.py",
+  "source": "Assets/Zeus/source/ZeusRigV2",
+  "canvas": [
+    1280,
+    800
+  ],
+  "dial": {
+    "centreX": 453.74,
+    "centreY": 420.0,
+    "radius": 490.0,
+    "uniformScaleMin": 0.8,
+    "uniformScaleMax": 1.25
+  },
+  "poses": [
+    {
+      "frame": 1,
+      "name": "sleeping",
+      "intensity": 0,
+      "shiftX": -81,
+      "fist": [
+        451.29999999999995,
+        513.18
+      ],
+      "base": {
+        "file": "pose_01_base.png",
+        "x": 337,
+        "y": 244,
+        "w": 371,
+        "h": 359
+      },
+      "arm": {
+        "file": "pose_01_arm.png",
+        "x": 396,
+        "y": 327,
+        "w": 133,
+        "h": 210
+      },
+      "bolt": {
+        "file": "bolt_01.png",
+        "x": 435,
+        "y": 501,
+        "w": 138,
+        "h": 231
+      },
+      "boltAnchor": [
+        97.29999999999995,
+        12.17999999999995
+      ],
+      "boltTip": [
+        24.279999999999973,
+        212.79999999999995
+      ],
+      "boltSource": "lightning/independent/lightning_01.png",
+      "cleanup": {
+        "base_removed": [],
+        "arm_removed": [],
+        "bolt_removed": []
+      }
+    },
+    {
+      "frame": 2,
+      "name": "waking",
+      "intensity": 12,
+      "shiftX": -26,
+      "fist": [
+        434.32,
+        450.96
+      ],
+      "base": {
+        "file": "pose_02_base.png",
+        "x": 399,
+        "y": 189,
+        "w": 283,
+        "h": 414
+      },
+      "arm": {
+        "file": "pose_02_arm.png",
+        "x": 410,
+        "y": 307,
+        "w": 111,
+        "h": 177
+      },
+      "bolt": {
+        "file": "bolt_02.png",
+        "x": 361,
+        "y": 438,
+        "w": 141,
+        "h": 238
+      },
+      "boltAnchor": [
+        99.32,
+        12.95999999999998
+      ],
+      "boltTip": [
+        24.20999999999998,
+        219.32000000000005
+      ],
+      "boltSource": "lightning/independent/lightning_02.png",
+      "cleanup": {
+        "base_removed": [],
+        "arm_removed": [],
+        "bolt_removed": []
+      }
+    },
+    {
+      "frame": 3,
+      "name": "focused",
+      "intensity": 25,
+      "shiftX": 0,
+      "fist": [
+        420.06,
+        446.08
+      ],
+      "base": {
+        "file": "pose_03_base.png",
+        "x": 404,
+        "y": 190,
+        "w": 285,
+        "h": 413
+      },
+      "arm": {
+        "file": "pose_03_arm.png",
+        "x": 407,
+        "y": 308,
+        "w": 99,
+        "h": 183
+      },
+      "bolt": {
+        "file": "bolt_03.png",
+        "x": 319,
+        "y": 433,
+        "w": 142,
+        "h": 243
+      },
+      "boltAnchor": [
+        101.06,
+        13.079999999999984
+      ],
+      "boltTip": [
+        24.279999999999973,
+        224.01999999999998
+      ],
+      "boltSource": "lightning/independent/lightning_03.png",
+      "cleanup": {
+        "base_removed": [],
+        "arm_removed": [],
+        "bolt_removed": []
+      }
+    },
+    {
+      "frame": 4,
+      "name": "lifting",
+      "intensity": 37,
+      "shiftX": -54,
+      "fist": [
+        440.48,
+        219.16
+      ],
+      "base": {
+        "file": "pose_04_base.png",
+        "x": 391,
+        "y": 208,
+        "w": 308,
+        "h": 395
+      },
+      "arm": {
+        "file": "pose_04_arm.png",
+        "x": 408,
+        "y": 208,
+        "w": 120,
+        "h": 148
+      },
+      "bolt": {
+        "file": "bolt_04.png",
+        "x": 461,
+        "y": 19,
+        "w": 146,
+        "h": 217
+      },
+      "boltAnchor": [
+        33.48000000000002,
+        200.16
+      ],
+      "boltTip": [
+        122.25999999999999,
+        18.14
+      ],
+      "boltSource": "lightning/independent/lightning_04.png",
+      "cleanup": {
+        "base_removed": [],
+        "arm_removed": [],
+        "bolt_removed": []
+      }
+    },
+    {
+      "frame": 5,
+      "name": "raised",
+      "intensity": 50,
+      "shiftX": -20,
+      "fist": [
+        453.74,
+        209.4
+      ],
+      "base": {
+        "file": "pose_05_base.png",
+        "x": 399,
+        "y": 183,
+        "w": 298,
+        "h": 420
+      },
+      "arm": {
+        "file": "pose_05_arm.png",
+        "x": 435,
+        "y": 187,
+        "w": 111,
+        "h": 165
+      },
+      "bolt": {
+        "file": "bolt_05.png",
+        "x": 461,
+        "y": 19,
+        "w": 146,
+        "h": 217
+      },
+      "boltAnchor": [
+        33.48000000000002,
+        200.16
+      ],
+      "boltTip": [
+        122.25999999999999,
+        18.14
+      ],
+      "boltSource": "lightning/independent/lightning_04.png",
+      "cleanup": {
+        "base_removed": [],
+        "arm_removed": [],
+        "bolt_removed": []
+      }
+    },
+    {
+      "frame": 6,
+      "name": "aiming",
+      "intensity": 62,
+      "shiftX": 39,
+      "fist": [
+        764.06,
+        270.4
+      ],
+      "base": {
+        "file": "pose_06_base.png",
+        "x": 385,
+        "y": 219,
+        "w": 417,
+        "h": 384
+      },
+      "arm": {
+        "file": "pose_06_arm.png",
+        "x": 612,
+        "y": 243,
+        "w": 191,
+        "h": 127
+      },
+      "bolt": {
+        "file": "bolt_06.png",
+        "x": 702,
+        "y": 108,
+        "w": 226,
+        "h": 191
+      },
+      "boltAnchor": [
+        23.059999999999945,
+        162.39999999999998
+      ],
+      "boltTip": [
+        205.72000000000003,
+        19.689999999999998
+      ],
+      "boltSource": "lightning/independent/lightning_06.png",
+      "cleanup": {
+        "base_removed": [],
+        "arm_removed": [],
+        "bolt_removed": []
+      }
+    },
+    {
+      "frame": 7,
+      "name": "charging",
+      "intensity": 75,
+      "shiftX": 4,
+      "fist": [
+        791.28,
+        276.5
+      ],
+      "base": {
+        "file": "pose_07_base.png",
+        "x": 372,
+        "y": 225,
+        "w": 444,
+        "h": 379
+      },
+      "arm": {
+        "file": "pose_07_arm.png",
+        "x": 560,
+        "y": 254,
+        "w": 258,
+        "h": 148
+      },
+      "bolt": {
+        "file": "bolt_07.png",
+        "x": 778,
+        "y": 163,
+        "w": 311,
+        "h": 172
+      },
+      "boltAnchor": [
+        9.279999999999973,
+        113.5
+      ],
+      "boltTip": [
+        279.6099999999999,
+        65.83000000000001
+      ],
+      "boltSource": "lightning/independent/lightning_07.png",
+      "cleanup": {
+        "base_removed": [],
+        "arm_removed": [],
+        "bolt_removed": []
+      }
+    },
+    {
+      "frame": 8,
+      "name": "striking",
+      "intensity": 87,
+      "shiftX": 37,
+      "fist": [
+        812.08,
+        276.5
+      ],
+      "base": {
+        "file": "pose_08_base.png",
+        "x": 351,
+        "y": 197,
+        "w": 482,
+        "h": 407
+      },
+      "arm": {
+        "file": "pose_08_arm.png",
+        "x": 604,
+        "y": 257,
+        "w": 233,
+        "h": 124
+      },
+      "bolt": {
+        "file": "bolt_08.png",
+        "x": 770,
+        "y": 168,
+        "w": 346,
+        "h": 169
+      },
+      "boltAnchor": [
+        5.080000000000041,
+        108.5
+      ],
+      "boltTip": [
+        315.4200000000001,
+        86.80000000000001
+      ],
+      "boltSource": "lightning/independent/lightning_08.png",
+      "cleanup": {
+        "base_removed": [
+          [
+            501,
+            444,
+            185,
+            471,
+            203
+          ],
+          [
+            44,
+            467,
+            221,
+            471,
+            229
+          ]
+        ],
+        "arm_removed": [],
+        "bolt_removed": []
+      }
+    },
+    {
+      "frame": 9,
+      "name": "max_tune",
+      "intensity": 100,
+      "shiftX": 63,
+      "fist": [
+        840.52,
+        278.94
+      ],
+      "base": {
+        "file": "pose_09_base.png",
+        "x": 348,
+        "y": 222,
+        "w": 499,
+        "h": 382
+      },
+      "arm": {
+        "file": "pose_09_arm.png",
+        "x": 625,
+        "y": 264,
+        "w": 224,
+        "h": 112
+      },
+      "bolt": {
+        "file": "bolt_09.png",
+        "x": 774,
+        "y": 167,
+        "w": 419,
+        "h": 189
+      },
+      "boltAnchor": [
+        3.519999999999982,
+        111.94
+      ],
+      "boltTip": [
+        387.81999999999994,
+        111.94
+      ],
+      "boltSource": "lightning/independent/lightning_09.png",
+      "cleanup": {
+        "base_removed": [],
+        "arm_removed": [],
+        "bolt_removed": []
+      }
+    }
+  ]
+}

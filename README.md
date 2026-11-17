@@ -2,6 +2,16 @@
 
 Independent C++/JUCE project for a **real-time monophonic vocal pitch corrector**. This project does not contain any Antares code, names, binaries, assets, or copy-protected resources.
 
+## Design V1 interface (branch `design/v1-polish`)
+
+Ivory and champagne-gold interface. Zeus's lightning bolt is the Retune pointer, and the main screen has only
+Power, Retune, Key, Scale and Settings. The VST3 is built and its tests pass on macOS and Windows CI.
+**It has not yet been checked in a DAW.** See [Docs/DESIGN_V1_IMPLEMENTATION.md](Docs/DESIGN_V1_IMPLEMENTATION.md)
+for how it works, measurements and known limitations. Zeus artwork: `Assets/Zeus/source` (original) is turned
+into `Assets/Zeus/ui` (optimized) by `tools/build_zeus_assets.py`.
+
+![Design V1](Docs/screenshots/main_050.png)
+
 ## Current status
 
 **DSP test suite: passing on Linux using synthetic sine-wave test cases.**

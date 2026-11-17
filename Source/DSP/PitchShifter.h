@@ -13,6 +13,8 @@ public:
         sampleRate_ = static_cast<float>(sampleRate);
         centreDelay_ = static_cast<float>(nominalLatencySamples(sampleRate));
         slew_ = 1.0f - std::exp(-1.0f / (0.004f * sampleRate_));
+        for (int i = 0; i <= kWindowLut; ++i)
+            window_[static_cast<size_t>(i)] = 0.5f - 0.5f * std::cos(6.283185307179586f * i / kWindowLut);
         reset();
     }
     void reset() noexcept {
@@ -20,7 +22,6 @@ public:
         smoothRatio_ = 1.0f;
     }
     float process(float x, float ratio, float detectedHz = 220.0f) noexcept {
-        constexpr float twoPi = 6.283185307179586f;
         // One head sweeps a delay interval of two source periods per cycle.
         // The sweep rate, NOT a fixed grain duration, depends on shift amount:
         // this produces correct small (cents-level) shifts as well as octaves.
@@ -35,7 +36,10 @@ public:
         const float signedSweep = std::copysign(sweepSamples, delta);
         const float d1 = centreDelay_ + (phase_ - 0.5f) * signedSweep;
         const float d2 = centreDelay_ + (otherPhase - 0.5f) * signedSweep;
-        const float weight = 0.5f - 0.5f * std::cos(twoPi * phase_);
+        const float windowPosition = phase_ * kWindowLut;
+        const int windowIndex = static_cast<int>(windowPosition);
+        const float windowFraction = windowPosition - static_cast<float>(windowIndex);
+        const float weight = window_[windowIndex] + windowFraction * (window_[windowIndex + 1] - window_[windowIndex]);
         const float y = weight * read(d1) + (1.0f - weight) * read(d2);
         write_ = (write_ + 1) % kSize;
         phase_ += std::abs(1.0f - smoothRatio_) / sweepSamples;
@@ -50,6 +54,8 @@ public:
 
 private:
     static constexpr int kSize = 32768;
+    static constexpr int kWindowLut = 1024;
+    std::array<float, kWindowLut + 1> window_{};
     std::array<float, kSize> delay_{};
     int write_ = 0;
     float phase_ = 0.0f, smoothRatio_ = 1.0f, sampleRate_ = 48000.0f;

@@ -34,14 +34,19 @@ public:
         targetShiftSemitones_ = currentShiftSemitones_ = 0.0f;
         updateCoefficients();
         stableSamples_ = 0; lastTargetMidi_ = -999; lostSamples_ = 0;
+        ratio_ = 1.0f; ratioStep_ = 0.0f; ratioCountdown_ = 0; observedHz_ = 220.0f;
         latestInputHz.store(0); latestTargetHz.store(0); latestConfidence.store(0);
         for (auto& a : history_) a.store(0.0f);
         historyIndex_.store(0);
     }
     void setSettings(Settings settings) noexcept {
+        // The host may call processBlock hundreds of times per second. Only
+        // recompute time constants when the timing controls actually change.
+        const bool timingChanged = settings.retuneMs != settings_.retuneMs
+                                || settings.humanize != settings_.humanize;
         settings_ = settings;
         settings_.customMask &= 0xFFF;
-        updateCoefficients();
+        if (timingChanged) updateCoefficients();
     }
     void processFrame(float* samples, int channels) noexcept {
         channels = std::clamp(channels, 0, kMaxChannels);
@@ -53,9 +58,17 @@ public:
         const bool sustained = stableSamples_ > static_cast<int>(sampleRate_ * 0.3);
         const float coeff = sustained ? sustainedCoeff_ : quickCoeff_;
         currentShiftSemitones_ += coeff * (targetShiftSemitones_ - currentShiftSemitones_);
-        const float ratio = std::pow(2.0f, (currentShiftSemitones_ + settings_.transpose) / 12.0f);
+        // Recalculate the relatively costly exp2 only every 16 samples (~0.33 ms
+        // at 48 kHz); interpolate between ratios to avoid zipper noise.
+        if (ratioCountdown_ == 0) {
+            const float wanted = std::exp2((currentShiftSemitones_ + settings_.transpose) / 12.0f);
+            ratioStep_ = (wanted - ratio_) / kRatioPeriod;
+            ratioCountdown_ = kRatioPeriod;
+        }
+        ratio_ += ratioStep_;
+        --ratioCountdown_;
         for (int ch = 0; ch < channels; ++ch)
-            samples[ch] = shifters_[ch].process(samples[ch], ratio, std::max(45.0f, latestInputHz.load(std::memory_order_relaxed)));
+            samples[ch] = shifters_[ch].process(samples[ch], ratio_, observedHz_);
     }
     float getInputHz() const noexcept { return latestInputHz.load(std::memory_order_relaxed); }
     float getTargetHz() const noexcept { return latestTargetHz.load(std::memory_order_relaxed); }
@@ -103,6 +116,9 @@ private:
     float currentShiftSemitones_ = 0.0f, targetShiftSemitones_ = 0.0f;
     int lastTargetMidi_ = -999, stableSamples_ = 0, lostSamples_ = 0;
     float quickCoeff_ = 1.0f, sustainedCoeff_ = 1.0f;
+    static constexpr int kRatioPeriod = 16;
+    float ratio_ = 1.0f, ratioStep_ = 0.0f, observedHz_ = 220.0f;
+    int ratioCountdown_ = 0;
     void updateCoefficients() noexcept {
         const auto coefficient = [this](float timeMs) {
             return timeMs < 0.5f ? 1.0f :
@@ -134,7 +150,7 @@ private:
         lostSamples_ = 0;
         const float midi = 69.0f + 12.0f * std::log2(obs.frequencyHz / 440.0f);
         const int target = nearestMidi(midi, settings_);
-        if (target == lastTargetMidi_) stableSamples_ += 256;
+        if (target == lastTargetMidi_) stableSamples_ += detector_.hopSamples();
         else { stableSamples_ = 0; lastTargetMidi_ = target; }
         const float diff = static_cast<float>(target) - midi;
         float strength = 1.0f;
@@ -143,6 +159,7 @@ private:
             strength = std::clamp((std::abs(diff) - deadzone) / (settings_.flex * 0.55f), 0.0f, 1.0f);
         }
         targetShiftSemitones_ = diff * strength;
+        observedHz_ = std::max(45.0f, obs.frequencyHz);
         latestInputHz.store(obs.frequencyHz, std::memory_order_relaxed);
         latestTargetHz.store(440.0f * std::pow(2.0f, (target - 69.0f) / 12.0f), std::memory_order_relaxed);
         appendHistory(midi);

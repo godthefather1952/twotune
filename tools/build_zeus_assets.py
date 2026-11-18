@@ -41,11 +41,13 @@ BOLT_SOURCE_OVERRIDE = {5: 4}
 MANUAL_CLEAR = {5: {"base": [(455, 170, 526, 226)], "arm": [(455, 170, 526, 189)]}}
 # Detached islands smaller than this fraction of a layer's opaque area are removed.
 ISLAND_FRACTION = 0.015
-# Dial: centre x sits directly under pose 5's fist so the 50% bolt is exactly vertical.
-# centreY/radius were chosen by searching for the most even bolt lengths across all nine poses
-# (the source art bolts were not drawn for a circular 270-degree meter; see the docs).
-DIAL_CENTRE_Y = 420.0
-DIAL_RADIUS = 490.0
+# Dial: 270-degree meter from 6 o'clock (0%) to 3 o'clock (100%).
+# centreY = pose 9's fist height, so at 100% the bolt runs horizontally straight forward to the
+# right and its tip meets the end of the meter at 3 o'clock (pose 9's art bolt is horizontal too).
+# centreX/radius: the smallest meter that clears every pose's body (so the 0% tip at 6 o'clock is
+# never hidden behind Zeus's legs) while leaving a usable bolt length at 100%.
+DIAL_CENTRE_X = 615.0
+DIAL_RADIUS = 450.0
 # The bolt reaches the arc by scaling: up to this much uniformly (thicker when long), the rest
 # along its own axis only, so the bolt never balloons or turns into a stub.
 UNIFORM_SCALE_MIN, UNIFORM_SCALE_MAX = 0.8, 1.25
@@ -189,11 +191,10 @@ def main():
                           boltAnchor=boltAnchor, boltTip=boltTip,
                           boltSource=src["assetPaths"]["lightning"], cleanup=report))
 
-    # Dial geometry: centre directly under pose 5's fist -> the 50% bolt is exactly vertical and
-    # its tip lands on the top of the arc.
-    cx = poses[4]["fist"][0]
+    # Dial geometry (see DIAL_* above): centre height locked to pose 9's fist.
+    cx, cy = DIAL_CENTRE_X, poses[8]["fist"][1]
     radius = DIAL_RADIUS
-    dial = {"centreX": cx, "centreY": DIAL_CENTRE_Y, "radius": radius,
+    dial = {"centreX": cx, "centreY": cy, "radius": radius,
             "uniformScaleMin": UNIFORM_SCALE_MIN, "uniformScaleMax": UNIFORM_SCALE_MAX}
 
     rig = {"generatedBy": "tools/build_zeus_assets.py", "source": "Assets/Zeus/source/ZeusRigV2",
@@ -204,7 +205,7 @@ def main():
     for p in poses:
         cleaned = {k: v for k, v in p["cleanup"].items() if v}
         print(f"pose {p['frame']}: shift {p['shiftX']:+d}px  fist {p['fist']}  cleanup {cleaned or '-'}")
-    print(f"dial centre ({cx:.2f}, {DIAL_CENTRE_Y}) radius {radius:.2f}")
+    print(f"dial centre ({cx:.2f}, {cy:.2f}) radius {radius:.2f}")
     total = sum(f.stat().st_size for f in OUT.glob("*.png"))
     print(f"ui assets: {len(list(OUT.glob('*.png')))} files, {total / 1024:.0f} KiB")
 
@@ -296,13 +297,13 @@ def preview(rig):
     for t in [0, 12, 25, 37, 50, 62, 75, 87, 100]:
         img = Image.new("RGBA", (W, H), (250, 244, 233, 255))
         dr = ImageDraw.Draw(img)
-        th = math.radians(135 + 270 * t / 100)
+        th = math.radians(90 + 270 * t / 100)
         tip = (d["centreX"] + d["radius"] * math.cos(th), d["centreY"] + d["radius"] * math.sin(th))
         box = [d["centreX"] - d["radius"], d["centreY"] - d["radius"] + oy,
                d["centreX"] + d["radius"], d["centreY"] + d["radius"] + oy]
-        dr.arc(box, 135, 405, fill=(220, 200, 160, 255), width=10)
+        dr.arc(box, 90, 360, fill=(220, 200, 160, 255), width=10)
         if t > 0:
-            dr.arc(box, 135, 135 + 270 * t / 100, fill=(232, 178, 40, 255), width=10)
+            dr.arc(box, 90, 90 + 270 * t / 100, fill=(232, 178, 40, 255), width=10)
         p = poses[pose_index(t, poses)]
         def paste(k):
             r = p[k]; img.alpha_composite(imgs[(p["frame"], k)], (r["x"], r["y"] + oy))

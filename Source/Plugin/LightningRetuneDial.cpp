@@ -6,8 +6,7 @@ namespace z = evolutionvox::ui::zeus;
 using Mapping = evolutionvox::ui::RetuneDialMapping;
 namespace theme = evolutionvox::ui::theme;
 
-constexpr float kArcMarginCanvas = 34.0f;      // room for meter glow around the arc
-constexpr float kEndLabelSpaceCanvas = 46.0f;  // extra room under the arc ends for their labels
+constexpr float kArcMarginCanvas = 48.0f;      // room for meter glow and the tip spark around the arc
 constexpr int kTicks = 54;
 
 juce::Image loadResource(const juce::String& name) {
@@ -65,11 +64,7 @@ LightningRetuneDial::~LightningRetuneDial() {
     endGesture();
 }
 
-z::Bounds LightningRetuneDial::sceneCanvasBounds() {
-    auto b = z::sceneBounds(kArcMarginCanvas);
-    b.y1 += kEndLabelSpaceCanvas;   // NATURAL / HARD TUNE sit below the two meter ends
-    return b;
-}
+z::Bounds LightningRetuneDial::sceneCanvasBounds() { return z::sceneBounds(kArcMarginCanvas); }
 
 juce::AffineTransform LightningRetuneDial::canvasToLocalTransform() const noexcept {
     const auto b = sceneCanvasBounds();
@@ -157,15 +152,17 @@ void LightningRetuneDial::rebuildTrackCache(float physicalScale) {
                    major ? 1.6f : 1.0f);
     }
 
-    // end labels (words, never numbers)
+    // End labels (words, never numbers). Both sit inside the meter's empty lower-right quadrant:
+    // NATURAL just right of the 6 o'clock start, HARD TUNE just under the 3 o'clock end.
     const auto f = theme::font(std::max(9.0f, r * 0.043f), true);
+    const float lineH = f.getHeight() * 1.3f, spacing = f.getHeight() * 0.22f;
     g.setColour(theme::taupe);
-    for (const auto& [value, text] : { std::pair<float, const char*>{ 0.0f, "NATURAL" }, { 100.0f, "HARD TUNE" } }) {
-        const auto p = z::meterPoint(value);
-        const auto lp = canvasToLocal(p.x, p.y);
-        theme::drawSpacedText(g, text, { lp.x - r * 0.4f, lp.y + t * 1.3f, r * 0.8f, f.getHeight() * 1.3f },
-                              f, f.getHeight() * 0.22f, juce::Justification::centred);
-    }
+    const auto start = z::meterPoint(0.0f), end = z::meterPoint(100.0f);
+    const auto ls = canvasToLocal(start.x, start.y), le = canvasToLocal(end.x, end.y);
+    theme::drawSpacedText(g, "NATURAL", { ls.x + t * 1.2f, ls.y - lineH * 0.5f, r * 0.6f, lineH },
+                          f, spacing, juce::Justification::left);
+    theme::drawSpacedText(g, "HARD TUNE", { le.x + t * 0.5f - r * 0.6f, le.y + t * 1.3f, r * 0.6f, lineH },
+                          f, spacing, juce::Justification::right);
 }
 
 // ---------------------------------------------------------------------------------------------

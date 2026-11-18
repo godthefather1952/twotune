@@ -2,7 +2,7 @@
 
 Branch `design/v1-polish` (from `design/divine-white-v1-lightning-dial`). `main` (Build 0.1) is untouched.
 
-![Design V1 at 50%](screenshots/main_050.png)
+![Design V1 at 100%: horizontal strike](screenshots/main_100.png)
 
 ## Main screen
 
@@ -27,6 +27,13 @@ How the dial responds:
 - **Arrow, Page and Home/End keys:** step through the range.
 - **Screen readers:** see a slider whose value reads in ms.
 
+## Standalone app
+
+The same processor and editor are also built as a normal macOS application (JUCE Standalone format), so
+the interface can be tested without a DAW: `build/EvolutionVox_artefacts/Release/Standalone/EvolutionVox.app`.
+The window is resizable. Its Options button picks the audio device. JUCE mutes the audio input by default
+to prevent feedback; use headphones before unmuting it. The VST3 is unchanged.
+
 ## Settings panel (all Build 0.1 features kept)
 
 The panel holds:
@@ -48,8 +55,16 @@ A footer states that formant correction and throat modelling are **not** impleme
 - **Bolt transform:** maps the bolt image's **grip to the pose's fist** and its **tip exactly onto the
   meter point**, using rotation plus scaling. The bolt *is* the pointer; there is no second knob or pointer.
 
-At 50% the dial centre sits directly under pose 5's fist, so the bolt is vertical and its tip touches the
-top of the meter. This is tested to within 0.01 px.
+The meter sweeps exactly 270°, from 6 o'clock (0%, Natural) over the top to **3 o'clock (100%, Hard
+Tune)**. The dial centre sits at the same height as pose 9's fist, so at 100% Zeus strikes with the bolt
+**horizontal, straight forward to the right**, and its tip meets the end of the gold meter. Pose 9's painted
+bolt is already horizontal, so it isn't rotated. The radius (450) is the smallest that keeps the meter clear
+of every pose, so the 0% tip at 6 o'clock is never hidden behind Zeus's legs. All of this is tested to within
+0.01 px. 50% now points to the upper-left diagonal (pose 5).
+
+The empty lower-right quadrant holds the HARD TUNE label. The area directly **below the dial is reserved
+for a future secondary control** (`secondaryControlArea()` in the editor). Nothing is drawn there yet, and
+a test checks that it stays empty.
 
 Each pose is drawn in this order: body without the active arm, then the independent lightning, then the
 active arm (so the fist covers the grip). The arm is never rotated, so the shoulder seams stay exactly as
@@ -71,7 +86,7 @@ painted. Base + arm reproduce `complete_no_bolt` pixel-for-pixel, which the pipe
 | Pose 5's bolt is clipped at the top of the canvas (tip y = −20) and has a dark ledge | Pose 5 uses the complete pose 4 bolt, re-aimed to vertical at runtime. |
 | The blunt, dark-edged grip end of each bolt | The bolt fades out over the last 14 px before the fist, so the fist hides it at any angle. |
 | Shoulder gaps | The arm layers are never rotated, so registration is preserved. |
-| The bolt directions in the art don't follow a 270° meter | The bolt is re-aimed and length-fitted for each value: up to 0.8–1.25× uniform scale, with the rest of the change along its own axis (0.45–2.16× length overall). |
+| The bolt directions in the art don't follow a 270° meter | The bolt is re-aimed and length-fitted for each value: up to 0.8–1.25× uniform scale, with the rest of the change along its own axis (0.58–2.29× length overall). |
 
 ## Parameters, automation and recall (all covered by `EvolutionVoxPluginTests`)
 
@@ -152,10 +167,11 @@ in the PR).
   show on a dark background.
 - **The poses are regenerated art,** not pixel-identical to the previously approved illustration (per the
   handoff). They need art-direction sign-off.
-- **The bolt is re-aimed, not redrawn per angle.** At some values (around 25–31% and 87–100%) it points well
-  away from how it was painted, and it is stretched up to about 2.2× near 0%.
+- **The bolt is re-aimed, not redrawn per angle.** With the 6 o'clock → 3 o'clock meter it points up to 138° away from how it was painted (pose 4 around 31%, where the raised fist points left). Its length ranges from 0.58× (100%, horizontal) to 2.29× (pose 6 around 56%).
 - **Hard tune saturates early:** above about 87% intensity (below 0.5 ms) the DSP already behaves as
   instant hard tune, so the last part of the arc sounds identical (the existing DSP behaviour).
 - **No DAW testing yet:** the VST3 builds and the headless tests pass, but it hasn't been checked inside a
   DAW, and DAW CPU hasn't been measured.
-- **No AU format:** VST3 only, as before.
+- **No AU format:** VST3 and Standalone only.
+- **The standalone app is unsigned:** it opens on the Mac that built it. On another Mac, Gatekeeper needs right-click → Open.
+- **Zeus is drawn smaller than before:** the meter must clear his feet at 6 o'clock and reach his fist height at 3 o'clock, which makes the dial larger relative to him.

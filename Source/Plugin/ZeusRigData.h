@@ -15,9 +15,9 @@ struct Pose {
     Point boltTip;       // tip inside the cropped bolt image
 };
 
-constexpr float dialCentreX = 453.740f;
-constexpr float dialCentreY = 420.000f;
-constexpr float dialRadius = 490.000f;
+constexpr float dialCentreX = 615.000f;
+constexpr float dialCentreY = 278.940f;
+constexpr float dialRadius = 450.000f;
 constexpr float boltUniformScaleMin = 0.800f;
 constexpr float boltUniformScaleMax = 1.250f;
 

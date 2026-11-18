@@ -45,21 +45,26 @@ int main() {
                 }
             }
         }
-        check(minStretch > 0.4f && maxStretch < 2.4f, "bolt stretch out of documented range");
+        check(minStretch > 0.5f && maxStretch < 2.4f, "bolt stretch out of documented range");
 
-        // 2. 50%: pose 5 (raised), bolt exactly vertical, tip on the very top of the meter.
-        const int p50 = z::poseForIntensity(50.0f);
-        check(p50 == 4, "50% must show pose 5 (raised)");
-        const auto t50 = z::boltTransform(p50, 50.0f);
-        check(near(t50.tip.x, z::dialCentreX, 0.01f) && near(t50.tip.y, z::dialCentreY - z::dialRadius, 0.01f),
-              "50% tip is not at the top of the meter");
-        check(near(z::poses[4].fist.x, z::dialCentreX, 0.01f), "50% bolt is not vertical");
+        // 2. 100%: pose 9, bolt horizontal straight forward to the right, tip on the meter's end at
+        //    3 o'clock. 50%: pose 5 (raised).
+        const int p100 = z::poseForIntensity(100.0f);
+        check(p100 == 8, "100% must show pose 9 (max tune)");
+        const auto t100 = z::boltTransform(p100, 100.0f);
+        check(near(t100.tip.x, z::dialCentreX + z::dialRadius, 0.01f) && near(t100.tip.y, z::dialCentreY, 0.01f),
+              "100% tip is not at 3 o'clock on the meter");
+        check(near(z::poses[8].fist.y, z::dialCentreY, 0.01f) && t100.tip.x > z::poses[8].fist.x,
+              "100% bolt is not horizontal / pointing right");
+        check(z::poseForIntensity(50.0f) == 4, "50% must show pose 5 (raised)");
         check(near(RetuneDialMapping::retuneMsFromIntensity(50.0f), 31.25f, 0.01f), "50% != 31.25 ms");
 
-        // 3. Ends: 0% lower-left (Natural), 100% lower-right (Hard Tune).
-        const auto p0 = z::meterPoint(0.0f), p100 = z::meterPoint(100.0f);
-        check(p0.x < z::dialCentreX && p0.y > z::dialCentreY, "0% must point lower-left");
-        check(p100.x > z::dialCentreX && p100.y > z::dialCentreY, "100% must point lower-right");
+        // 3. 0% points straight down (6 o'clock), below every pose, so the tip is never hidden.
+        const auto p0 = z::meterPoint(0.0f);
+        check(near(p0.x, z::dialCentreX, 0.01f) && near(p0.y, z::dialCentreY + z::dialRadius, 0.01f),
+              "0% must be at 6 o'clock");
+        for (const auto& p : z::poses)
+            check(static_cast<float>(p.base.y + p.base.h) < p0.y, "a pose overlaps the 0% end of the meter");
 
         // 4. Pose progression: monotonic, all nine reached, each nominal value shows its own pose.
         int last = 0, seen = 0;

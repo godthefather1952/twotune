@@ -63,8 +63,12 @@ if(EVOLUTIONVOX_BUILD_PLUGIN)
       BUNDLE_ID "audio.evolutionvox.plugin"
       PLUGIN_MANUFACTURER_CODE Evol
       PLUGIN_CODE Evo1
-      FORMATS VST3
+      # VST3 for DAWs + Standalone app (same processor and editor) for testing without a DAW.
+      FORMATS VST3 Standalone
       VST3_CAN_REPLACE_VST2 FALSE
+      # macOS requires a usage string before the standalone app may open the microphone.
+      MICROPHONE_PERMISSION_ENABLED TRUE
+      MICROPHONE_PERMISSION_TEXT "EvolutionVox tunes the vocal coming from your audio input."
       PRODUCT_NAME "EvolutionVox"
       IS_SYNTH FALSE
       NEEDS_MIDI_INPUT FALSE

@@ -2,6 +2,15 @@
 
 namespace theme = evolutionvox::ui::theme;
 
+namespace layout {
+// Design-space (1000 x 650) vertical layout of the main screen.
+constexpr float dialTop = 92.0f;
+constexpr float dialBottom = 548.0f;
+constexpr float captionY = 548.0f;     // "RETUNE" caption
+constexpr float slotTop = 576.0f;      // reserved secondary-control area starts here
+constexpr float slotWidth = 380.0f;
+} // namespace layout
+
 namespace {
 juce::Rectangle<int> design(float k, float x, float y, float w, float h) {
     return juce::Rectangle<float>(x * k, y * k, w * k, h * k).toNearestInt();
@@ -77,11 +86,11 @@ void EvolutionVoxAudioProcessorEditor::Background::paint(juce::Graphics& g) {
     theme::drawSpacedText(g, "KEY", design(k, 36, 300, 166, 24).toFloat(), labelFont, 4.0f * k, juce::Justification::centred);
     theme::drawSpacedText(g, "SCALE", design(k, 798, 300, 166, 24).toFloat(), labelFont, 4.0f * k, juce::Justification::centred);
     g.setColour(theme::goldDeep);
-    theme::drawSpacedText(g, "RETUNE", design(k, 350, 606, 300, 30).toFloat(), theme::font(18.0f * k, true),
+    theme::drawSpacedText(g, "RETUNE", design(k, 350, layout::captionY, 300, 26).toFloat(), theme::font(18.0f * k, true),
                           6.0f * k, juce::Justification::centred);
     g.setColour(theme::gold.withAlpha(0.7f));
-    g.fillRect(design(k, 392, 620, 26, 1).toFloat().withHeight(std::max(1.0f, k)));
-    g.fillRect(design(k, 582, 620, 26, 1).toFloat().withHeight(std::max(1.0f, k)));
+    g.fillRect(design(k, 392, layout::captionY + 13, 26, 1).toFloat().withHeight(std::max(1.0f, k)));
+    g.fillRect(design(k, 582, layout::captionY + 13, 26, 1).toFloat().withHeight(std::max(1.0f, k)));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -190,15 +199,19 @@ void EvolutionVoxAudioProcessorEditor::resized() {
     // window's centre line. Its aspect comes from the rig bounds so nothing is clipped.
     const auto b = LightningRetuneDial::sceneCanvasBounds();
     const float sceneW = b.x1 - b.x0, sceneH = b.y1 - b.y0;
-    const float height = 506.0f * k;
+    const float height = (layout::dialBottom - layout::dialTop) * k;
     const float sceneScale = height / sceneH;
     const float width = sceneW * sceneScale;
     const float x = 500.0f * k - (evolutionvox::ui::zeus::dialCentreX - b.x0) * sceneScale;
-    dial.setBounds(juce::Rectangle<float>(x, 96.0f * k, width, height).toNearestInt());
+    dial.setBounds(juce::Rectangle<float>(x, layout::dialTop * k, width, height).toNearestInt());
+    // Reserved for a future secondary control directly below the dial. Intentionally empty:
+    // nothing is drawn or placed here yet.
+    secondarySlot = design(k, 500 - layout::slotWidth * 0.5f, layout::slotTop, layout::slotWidth,
+                           theme::designHeight - layout::slotTop - 8);
 
     const auto centre = dial.getPosition().toFloat() + dial.canvasToLocal(evolutionvox::ui::zeus::dialCentreX,
                                                                           evolutionvox::ui::zeus::dialCentreY);
-    background.haloCentre = centre.translated(0.0f, -40.0f * k);
+    background.haloCentre = centre.translated(0.0f, 10.0f * k);
     background.haloRadius = evolutionvox::ui::zeus::dialRadius * sceneScale * 1.05f;
     background.repaint();
 }

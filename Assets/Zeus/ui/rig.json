@@ -6,9 +6,9 @@
     800
   ],
   "dial": {
-    "centreX": 453.74,
-    "centreY": 420.0,
-    "radius": 490.0,
+    "centreX": 615.0,
+    "centreY": 278.94,
+    "radius": 450.0,
     "uniformScaleMin": 0.8,
     "uniformScaleMax": 1.25
   },

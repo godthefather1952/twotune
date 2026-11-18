@@ -17,11 +17,16 @@ Existing VST3 automation parameter named retune stays in **0..250 milliseconds**
 
 | Intensity | Retune ms | Bolt points |
 | --- | ---: | --- |
-| 0% | 250.00 | lower-left (natural) |
-| 25% | 105.47 | upper-left |
-| 50% | 31.25 | straight up |
-| 75% | 3.91 | upper-right |
-| 100% | 0.00 | lower-right (hard tune) |
+| 0% | 250.00 | straight down, 6 o'clock (natural) |
+| 25% | 105.47 | 9:45, slightly below horizontal-left |
+| 50% | 31.25 | 10:30, upper-left diagonal |
+| 75% | 3.91 | 12:45, just past straight up |
+| 100% | 0.00 | horizontal right, 3 o'clock (hard tune: Zeus strikes straight forward) |
+
+**Revised November 2026 (design/v1-polish):** the sweep is still exactly 270 degrees but now runs from
+6 o'clock to 3 o'clock, so at maximum Retune Zeus's lightning points horizontally forward and its tip meets
+the end of the gold meter. This replaces the earlier "50% = straight up" layout. The empty quadrant is the
+lower right, and the space directly below the dial is reserved for a future secondary control.
 
 The precise cubic mapping and angles are defined only in Source/Plugin/RetuneDialMapping.h.
 Lightning bolt endpoint, gold arc fill, internal intensity value, pointer hit target and value sent to the DAW **must use the same mapping**. The internal percent is for calculations only, not a visible master-knob label. Increasing intensity reduces retune milliseconds. Mouse-drag around arc, mouse-wheel, double-click reset, automation, and project recall must work.
@@ -37,4 +42,4 @@ Lightning bolt endpoint, gold arc fill, internal intensity value, pointer hit ta
 ## Refined sprite-pack handoff
 - Nine exported transparent, matching-canvas Zeus + lightning sprite frames (no labels, percent badges, or background baked into them).
 - Draw the dial arc as its own layer and keep it independently animated; never flatten it into the sprites.
-- The 50% raised-lightning frame has a registered arc preview where the illuminated fill touches the lightning tip. At other values, the static frame tips still need final geometric calibration / animation rig work before claiming continuous pointer tracking.
+- Implemented in Source/Plugin/ZeusRig.h: at every value the bolt's grip stays on the pose's fist and its tip lands exactly on the end of the illuminated meter (unit tested). At 100% the bolt is horizontal.

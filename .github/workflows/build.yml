@@ -43,6 +43,12 @@ jobs:
         with:
           name: ${{ matrix.artifact }}-screenshots
           path: ci-screenshots
+      - name: Upload Standalone app artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.artifact }}-Standalone
+          path: build/EvolutionVox_artefacts/**/Standalone/**
+          if-no-files-found: error
       - name: Upload VST3 artifact
         uses: actions/upload-artifact@v5
         with:

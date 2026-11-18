@@ -233,6 +233,15 @@ void testEditor(const juce::File& shots) {
     scan(*editor);
     check(!percent, "main view shows no percentage text");
 
+    // The area below the dial is reserved for a future control and must stay empty for now.
+    const auto slot = editor->secondaryControlArea();
+    bool slotEmpty = !slot.isEmpty() && slot.getY() >= editor->getDial().getBottom();
+    for (auto* child : editor->getChildren())
+        if (child->isVisible() && child != &editor->getDial() && child->getWidth() < editor->getWidth()
+            && child->getBounds().intersects(slot))
+            slotEmpty = false;
+    check(slotEmpty, "space below the dial is reserved and empty");
+
     using Mapping = evolutionvox::ui::RetuneDialMapping;
     namespace z = evolutionvox::ui::zeus;
     bool posesOk = true;
@@ -247,6 +256,8 @@ void testEditor(const juce::File& shots) {
         }
     }
     check(posesOk, "automating retune drives the matching Zeus pose at all nine stages");
+    check(std::abs(z::meterPoint(100.0f).y - z::poses[8].fist.y) < 0.01f,
+          "at 100% the bolt is horizontal (fist and meter end at the same height)");
 
     // 50% screenshot at 2x (Retina) + timing of a full-window software render.
     setParam(p, "retune", Mapping::retuneMsFromIntensity(50.0f));

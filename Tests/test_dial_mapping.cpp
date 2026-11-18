@@ -23,9 +23,14 @@ int main() {
                 std::cos(theta), std::sin(theta));
             check(near(fromPoint, intensity, 0.05f), "bolt direction differs from displayed intensity");
         }
-        check(near(RetuneDialMapping::pointerDegrees(0), 135), "left endpoint");
-        check(near(RetuneDialMapping::pointerDegrees(50), 270), "vertical at midpoint");
-        check(near(RetuneDialMapping::pointerDegrees(100), 405), "right endpoint");
+        check(near(RetuneDialMapping::pointerDegrees(0), 90), "0% points straight down (6 o'clock)");
+        check(near(RetuneDialMapping::pointerDegrees(50), 225), "50% points to the upper-left diagonal");
+        check(near(RetuneDialMapping::pointerDegrees(100), 360), "100% points horizontally right (3 o'clock)");
+        check(near(RetuneDialMapping::pointerDegrees(100) - RetuneDialMapping::pointerDegrees(0), 270),
+              "exactly 270 degrees of travel");
+        // Clicks in the inactive lower-right gap snap to the nearer end.
+        check(near(RetuneDialMapping::intensityFromPointer(1.0f, 0.2f), 100), "gap near 3 o'clock -> 100%");
+        check(near(RetuneDialMapping::intensityFromPointer(0.2f, 1.0f), 0), "gap near 6 o'clock -> 0%");
         std::cout << "Design Reference V1 lightning-dial mapping passed\n";
         return 0;
     } catch(const std::exception& e) {

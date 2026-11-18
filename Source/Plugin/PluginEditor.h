@@ -19,6 +19,8 @@ public:
     LightningRetuneDial& getDial() noexcept { return dial; }
     void showSettings(bool shouldShow);
     bool isSettingsVisible() const noexcept { return settings.isVisible(); }
+    // Area directly below the Zeus dial reserved for a future secondary control (empty for now).
+    juce::Rectangle<int> secondaryControlArea() const noexcept { return secondarySlot; }
 
 private:
     // Static ivory chassis: gradient, clouds, logo, labels. Buffered: rendered once per size.
@@ -52,6 +54,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> keyAttachment, scaleAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> powerAttachment;
     SettingsPanel settings;
+    juce::Rectangle<int> secondarySlot;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EvolutionVoxAudioProcessorEditor)
 };

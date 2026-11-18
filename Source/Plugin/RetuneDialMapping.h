@@ -5,11 +5,15 @@
 namespace evolutionvox::ui {
 
 // One source of truth for the pointer, arc, readout and existing "retune" parameter.
-// 0% points to the lower-left (natural); 100% to the lower-right (hard tune).
-// The path sweeps 270 degrees OVER the top of the dial, not across its bottom gap.
+// Angles are screen angles in degrees: 0 = 3 o'clock, increasing clockwise (screen Y points down).
+// The usable travel is exactly 270 degrees:
+//   0%   -> 90 deg  (6 o'clock, straight down)     Natural
+//   50%  -> 225 deg (10:30, upper-left diagonal)
+//   100% -> 360 deg (3 o'clock, horizontal right)   Hard Tune: Zeus strikes straight forward
+// The inactive 90-degree gap is the lower-right quadrant (3 o'clock -> 6 o'clock).
 struct RetuneDialMapping {
     static constexpr float maxRetuneMs = 250.0f;
-    static constexpr float startDegrees = 135.0f;
+    static constexpr float startDegrees = 90.0f;
     static constexpr float sweepDegrees = 270.0f;
     static constexpr float pi = 3.14159265358979323846f;
 
@@ -35,12 +39,12 @@ struct RetuneDialMapping {
 
     // x/y are mouse coordinates relative to dial center (screen Y points down).
     static float intensityFromPointer(float x, float y) noexcept {
-        float a = std::atan2(y, x) * (180.0f / pi);
-        // The lower, inactive 90-degree gap snaps to the nearest endpoint.
-        if (a >= 45.0f && a < 135.0f)
-            return a < 90.0f ? 100.0f : 0.0f;
-        if (a < startDegrees) a += 360.0f;
-        return clampIntensity((a - startDegrees) * 100.0f / sweepDegrees);
+        const float a = std::atan2(y, x) * (180.0f / pi);              // -180..180
+        const float rel = std::fmod(a - startDegrees + 720.0f, 360.0f); // 0..360 from the 0% end
+        if (rel <= sweepDegrees)
+            return clampIntensity(rel * 100.0f / sweepDegrees);
+        // Inside the inactive gap: snap to the nearer end.
+        return rel < sweepDegrees + (360.0f - sweepDegrees) * 0.5f ? 100.0f : 0.0f;
     }
 };
 } // namespace evolutionvox::ui

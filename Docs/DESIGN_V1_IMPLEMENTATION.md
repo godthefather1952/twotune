@@ -52,8 +52,11 @@ A footer states that formant correction and throat modelling are **not** impleme
 - **Pose:** the nearest of the nine nominal intensities (0, 12, 25, 37, 50, 62, 75, 87, 100), with ±1%
   hysteresis so automation hovering on a boundary doesn't make Zeus flicker.
 - **Meter point:** a 270° arc (135° → 405°) from `RetuneDialMapping::pointerDegrees`.
-- **Bolt transform:** maps the bolt image's **grip to the pose's fist** and its **tip exactly onto the
-  meter point**, using rotation plus scaling. The bolt *is* the pointer; there is no second knob or pointer.
+- **Lightning:** a **vector** bolt (`boltGeometry` / `boltOutline`) built from the **pose's fist** to
+  **exactly the meter point**: three classic zig-zags, a gently tapered width and a sharp arrow-head tip.
+  It's drawn in layers (soft glow, amber edge, gold body, pale-gold and white-hot core). Its proportions
+  come from its own length, never from stretching a bitmap, so it stays crisp and undistorted at every
+  angle, length and display scale. The bolt *is* the pointer; there is no second knob or pointer.
 
 The meter sweeps exactly 270°, from 6 o'clock (0%, Natural) over the top to **3 o'clock (100%, Hard
 Tune)**. The dial centre sits at the same height as pose 9's fist, so at 100% Zeus strikes with the bolt
@@ -83,10 +86,9 @@ painted. Base + arm reproduce `complete_no_bolt` pixel-for-pixel, which the pipe
 | --- | --- |
 | The body jumps sideways between poses (up to ±50 px) | Each pose is shifted by whole pixels so the body's centre of mass stays put (the feet baseline was already constant). |
 | A stray gold fragment above pose 8's head | Islands detached from the whole figure (base ∪ arm) are removed. |
-| Pose 5's bolt is clipped at the top of the canvas (tip y = −20) and has a dark ledge | Pose 5 uses the complete pose 4 bolt, re-aimed to vertical at runtime. |
-| The blunt, dark-edged grip end of each bolt | The bolt fades out over the last 14 px before the fist, so the fist hides it at any angle. |
+| The source bolts are clipped (pose 5, tip y = −20), have blunt dark-edged grips, and point in directions that don't fit a 270° meter | The plug-in draws its own vector lightning instead. The source bolt PNGs are kept only for provenance. |
+| White matte halo around each arm/fist (shows against the gold bolt) | Near-white pixels on the figure's outer edge of the arm layer are removed (never on the arm/body seam). |
 | Shoulder gaps | The arm layers are never rotated, so registration is preserved. |
-| The bolt directions in the art don't follow a 270° meter | The bolt is re-aimed and length-fitted for each value: up to 0.8–1.25× uniform scale, with the rest of the change along its own axis (0.58–2.29× length overall). |
 
 ## Parameters, automation and recall (all covered by `EvolutionVoxPluginTests`)
 
@@ -128,8 +130,13 @@ estimates), which can add audible lag in hard-tune. See *Decisions needed* in th
 - PNGs decode lazily through JUCE's shared `ImageCache`, once per process across all instances.
 - Sprites are pre-scaled once per display scale and drawn as 1:1 blits.
 - The meter track and the chassis are cached.
-- The dial polls two atomics at 30 Hz and repaints **only when the value changes**, and then only the dirty
-  rectangle (the bolt plus the changed meter segment).
+- **One update path for every input.** Click, drag, wheel, keys, accessibility and DAW automation only
+  set the parameter. A frame timer reads it and updates the picture: **60 fps maximum while something is
+  moving**, then after 0.4 s idle it drops to a 15 Hz poll of two atomics that draws nothing.
+- **Exact dirty regions.** Each frame repaints the old and new bolt plus the changed meter segment.
+  A pose or power change repaints the dial. Every layer depends only on the current value (the meter's
+  gradient is fixed across the dial), so a partial repaint is **pixel-identical** to a full one. This is
+  verified for click, drag, wheel and automation at 17 values by `EvolutionVoxPluginTests`.
 - The live pitch display updates only while Settings is open. On the main screen nothing animates, so an idle
   open editor costs essentially nothing.
 
@@ -150,14 +157,41 @@ These are offline measurements on one machine, **not** DAW measurements. They ar
 DSP-only benchmark (`evolutionvox_perf_bench`, 8 s, 48 kHz stereo): Build 0.1 took 0.120 s; this branch takes
 about 0.115 s. With the patch's detector change it would take 0.051 s (not adopted).
 
-Editor, software renderer, 1000×650: a full-window repaint takes 5.2 ms, and a full dial repaint 2.8 ms. In
-normal use only the dirty rectangle is repainted, and only while the value is changing.
+Editor, software renderer, 1000×650: a full-window repaint takes about 6 ms, and a full dial repaint about 4 ms.
+
+- **Drag sweep:** each frame repaints on average 13% of the dial in about 1.1 ms. At 60 fps that's at most
+  about 6.6% of one core (an upper bound: macOS's CoreGraphics renderer is usually faster).
+- **Idle:** a poll costs about 0.002 µs and never repaints.
+- **Standalone app idle:** measured at about 3.4% of one core, almost all of it the live audio device and
+  DSP.
 
 The DSP was never likely to be the cause of the original DAW slowdown (about 1.3% of one core). The Build 0.1
 editor, however, called `setColour` on all 12 note buttons 20 times a second, and each call repaints a button.
 Those repaints merged with the pitch-plot repaint into a large region redrawn 20 times a second while the
 window was open. That is gone. Confirming the DAW behaviour needs a measurement in your DAW (see the test plan
 in the PR).
+
+## Repaint glitch fix (dragging / scrolling)
+
+**Symptom:** a direct click on the arc looked right, but dragging, scrolling or automation left the bolt
+jagged and fragmented, with white and stale fragments.
+
+**Causes,** reproduced pixel-exactly by `EvolutionVoxPluginTests --repaint-experiment`, which emulates the
+OS's partial repaints and compares them with a full render:
+
+1. **Dirty-region bug:** `dirtyAreaFor()` grew the bolt's bounding box from a single point. JUCE treats a
+   zero-size rectangle as *empty*, so each corner replaced the previous one, and the "bolt area" was an
+   8×8 box. The old bolt was never erased. A click's big meter segment happened to cover it, which is why
+   clicks looked fine.
+2. **Position-dependent fill:** the meter gradient ran from the arc start to the *current* tip, so moving
+   the tip recoloured the whole lit arc, but only the dirty part was repainted.
+3. **Jagged bolt:** the bitmap bolt was resampled every frame while stretched up to 2.3× in one direction.
+
+**Before the fix:** forced full repaints showed 0 stale pixels on every route, while dirty-region repaints
+showed up to 20,503 stale pixels (colour difference up to 249/255) for drag, wheel and automation.
+
+**After:** 0 stale pixels on every route at all 17 values, and click and scroll renders of the same value
+are identical (largest difference 1/255).
 
 ## Known limitations
 
@@ -167,7 +201,7 @@ in the PR).
   show on a dark background.
 - **The poses are regenerated art,** not pixel-identical to the previously approved illustration (per the
   handoff). They need art-direction sign-off.
-- **The bolt is re-aimed, not redrawn per angle.** With the 6 o'clock → 3 o'clock meter it points up to 138° away from how it was painted (pose 4 around 31%, where the raised fist points left). Its length ranges from 0.58× (100%, horizontal) to 2.29× (pose 6 around 56%).
+- **The lightning is drawn by the plug-in, not taken from the supplied art.** It matches the art's colours and style but isn't a hand-painted bolt. Swapping in pose-specific painted bolts later would need art drawn for each angle.
 - **Hard tune saturates early:** above about 87% intensity (below 0.5 ms) the DSP already behaves as
   instant hard tune, so the last part of the arc sounds identical (the existing DSP behaviour).
 - **No DAW testing yet:** the VST3 builds and the headless tests pass, but it hasn't been checked inside a

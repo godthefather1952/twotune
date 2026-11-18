@@ -1,6 +1,7 @@
 // Zeus lightning-dial geometry tests (no JUCE). Verifies the Design V1 interaction contract:
-// the bolt tip lands exactly on the gold meter at every value, 50% is straight up at the top of
-// the meter, the nine poses progress in order, and nothing produces NaN or a degenerate bolt.
+// the vector bolt starts on Zeus's fist and its tip lands exactly on the gold meter at every value,
+// 100% strikes horizontally at 3 o'clock, the nine poses progress in order with hysteresis, and
+// the bolt is never degenerate (NaN, zero width) or clipped by the scene.
 #include "Plugin/ZeusRig.h"
 #include <cmath>
 #include <iostream>
@@ -15,9 +16,12 @@ static bool near(float a, float b, float eps) { return std::abs(a - b) <= eps; }
 
 int main() {
     try {
-        // 1. Exact tip/meter contact and fist attachment for every value and every pose that can be
-        //    selected around it (including the hysteresis neighbour).
-        float minStretch = 1e9f, maxStretch = 0.0f;
+        // 1. For every value and every pose that can be selected around it (including the hysteresis
+        //    neighbour): grip exactly on the fist, tip exactly on the meter, outline well formed and
+        //    inside the scene (no clipping).
+        const auto scene = z::sceneBounds(48.0f);   // = the dial component's area (kArcMarginCanvas)
+        const float glow = z::boltGlowWidth * 0.5f;
+        float minLength = 1e9f, maxLength = 0.0f;
         for (int step = 0; step <= 1000; ++step) {
             const float intensity = static_cast<float>(step) * 0.1f;
             const auto expected = z::meterPoint(intensity);
@@ -26,35 +30,41 @@ int main() {
             const int pose = z::poseForIntensity(intensity);
             for (int candidate : { pose - 1, pose, pose + 1 }) {
                 if (candidate < 0 || candidate >= z::numPoses) continue;
-                const auto t = z::boltTransform(candidate, intensity);
+                const auto g = z::boltGeometry(candidate, intensity);
                 const auto& p = z::poses[static_cast<size_t>(candidate)];
-                const auto grip = t.apply(p.boltAnchor), tip = t.apply(p.boltTip);
-                check(std::isfinite(grip.x) && std::isfinite(tip.y), "NaN in bolt transform");
-                check(near(grip.x, p.fist.x, 0.02f) && near(grip.y, p.fist.y, 0.02f),
+                check(near(g.centre.front().x, p.fist.x, 0.001f) && near(g.centre.front().y, p.fist.y, 0.001f),
                       "bolt detached from fist at " + std::to_string(intensity));
-                check(near(tip.x, expected.x, 0.02f) && near(tip.y, expected.y, 0.02f),
+                check(near(g.centre.back().x, expected.x, 0.001f) && near(g.centre.back().y, expected.y, 0.001f),
                       "bolt tip misses meter at " + std::to_string(intensity));
-                // Thickness (determinant / length) stays within the uniform-scale clamp.
-                const float det = std::abs(t.m00 * t.m11 - t.m01 * t.m10);
-                const float across = det / t.stretch;
-                check(across >= z::boltUniformScaleMin - 1e-3f && across <= z::boltUniformScaleMax + 1e-3f,
-                      "bolt thickness outside limits");
+                const auto outline = z::boltOutline(g, z::boltWidth);
+                check(near(outline[z::boltPoints - 1].x, expected.x, 0.001f)
+                      && near(outline[z::boltPoints - 1].y, expected.y, 0.001f), "outline tip is not the meter point");
+                for (size_t i = 0; i < outline.size(); ++i) {
+                    const auto& q = outline[i];
+                    check(std::isfinite(q.x) && std::isfinite(q.y), "NaN in bolt outline");
+                    check(q.x - glow >= scene.x0 && q.x + glow <= scene.x1 && q.y - glow >= scene.y0
+                          && q.y + glow <= scene.y1, "bolt would be clipped by the scene");
+                    if (i + 1 < z::boltPoints) {   // left/right edges are apart: real width, not a sliver
+                        const auto& mirror = outline[outline.size() - 1 - i];
+                        check(std::hypot(q.x - mirror.x, q.y - mirror.y) > z::boltWidth * 0.5f, "bolt too thin");
+                    }
+                }
                 if (candidate == pose) {
-                    minStretch = std::min(minStretch, t.stretch);
-                    maxStretch = std::max(maxStretch, t.stretch);
+                    minLength = std::min(minLength, g.length);
+                    maxLength = std::max(maxLength, g.length);
                 }
             }
         }
-        check(minStretch > 0.5f && maxStretch < 2.4f, "bolt stretch out of documented range");
+        check(minLength > 100.0f, "bolt too short to read as lightning");
 
         // 2. 100%: pose 9, bolt horizontal straight forward to the right, tip on the meter's end at
         //    3 o'clock. 50%: pose 5 (raised).
         const int p100 = z::poseForIntensity(100.0f);
         check(p100 == 8, "100% must show pose 9 (max tune)");
-        const auto t100 = z::boltTransform(p100, 100.0f);
-        check(near(t100.tip.x, z::dialCentreX + z::dialRadius, 0.01f) && near(t100.tip.y, z::dialCentreY, 0.01f),
-              "100% tip is not at 3 o'clock on the meter");
-        check(near(z::poses[8].fist.y, z::dialCentreY, 0.01f) && t100.tip.x > z::poses[8].fist.x,
+        const auto g100 = z::boltGeometry(p100, 100.0f);
+        check(near(g100.centre.back().x, z::dialCentreX + z::dialRadius, 0.01f)
+              && near(g100.centre.back().y, z::dialCentreY, 0.01f), "100% tip is not at 3 o'clock on the meter");
+        check(near(g100.centre.front().y, g100.centre.back().y, 0.01f) && g100.centre.back().x > g100.centre.front().x,
               "100% bolt is not horizontal / pointing right");
         check(z::poseForIntensity(50.0f) == 4, "50% must show pose 5 (raised)");
         check(near(RetuneDialMapping::retuneMsFromIntensity(50.0f), 31.25f, 0.01f), "50% != 31.25 ms");
@@ -89,7 +99,7 @@ int main() {
         check(b.y0 <= z::dialCentreY - z::dialRadius && b.x0 <= z::dialCentreX - z::dialRadius
               && b.x1 >= z::dialCentreX + z::dialRadius, "scene bounds clip the meter");
 
-        std::cout << "Zeus rig geometry passed (bolt stretch " << minStretch << ".." << maxStretch << ")\n";
+        std::cout << "Zeus rig geometry passed (bolt length " << minLength << ".." << maxLength << " canvas px)\n";
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "FAILED: " << e.what() << '\n';

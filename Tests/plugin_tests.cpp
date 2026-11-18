@@ -285,12 +285,179 @@ void testEditor(const juce::File& shots) {
     }
     check(!editor->isSettingsVisible(), "settings panel closes");
 }
+
+// ---------------------------------------------------------------------------------------------
+// Repaint consistency: emulate how the OS repaints only the requested area, step by step, and
+// compare the composited result with a fresh full render at the same final value. Any stale
+// pixels (wrong dirty region, position-dependent fills, ...) show up as differences.
+struct RepaintResult { int badPixels = 0; int maxDiff = 0; juce::Image composite, reference; };
+
+juce::Image fullRender(juce::Component& c) {
+    juce::Image img(juce::Image::ARGB, c.getWidth(), c.getHeight(), true);
+    juce::Graphics g(img);
+    g.fillAll(evolutionvox::ui::theme::ivory);
+    c.paintEntireComponent(g, false);
+    return img;
+}
+
+void paintRegion(juce::Image& canvas, juce::Component& c, juce::Rectangle<int> area) {
+    juce::Graphics g(canvas);
+    g.reduceClipRegion(area);
+    g.fillAll(evolutionvox::ui::theme::ivory);
+    c.paintEntireComponent(g, false);
+}
+
+RepaintResult compareImages(const juce::Image& a, const juce::Image& b) {
+    RepaintResult r;
+    const juce::Image::BitmapData da(a, juce::Image::BitmapData::readOnly), db(b, juce::Image::BitmapData::readOnly);
+    for (int y = 0; y < a.getHeight(); ++y)
+        for (int x = 0; x < a.getWidth(); ++x) {
+            const auto ca = da.getPixelColour(x, y), cb = db.getPixelColour(x, y);
+            const int d = std::max({ std::abs(ca.getRed() - cb.getRed()), std::abs(ca.getGreen() - cb.getGreen()),
+                                     std::abs(ca.getBlue() - cb.getBlue()) });
+            r.maxDiff = std::max(r.maxDiff, d);
+            if (d > 6) ++r.badPixels;
+        }
+    return r;
+}
+
+enum class Route { click, wheel, drag, automation };
+const char* routeName(Route r) {
+    switch (r) { case Route::click: return "click"; case Route::wheel: return "wheel";
+                 case Route::drag: return "drag"; case Route::automation: return "automation"; }
+    return "?";
+}
+
+// Reaches `target` by the given route starting from `start`, repainting only requested areas.
+RepaintResult reachAndCompare(EvolutionVoxAudioProcessor& p, LightningRetuneDial& dial, float start, float target, Route route) {
+    using Mapping = evolutionvox::ui::RetuneDialMapping;
+    setParam(p, "retune", Mapping::retuneMsFromIntensity(start));
+    dial.syncFromParameters();
+    auto canvas = fullRender(dial);
+    auto step = [&](float value) {
+        if (route == Route::automation) {
+            setParam(p, "retune", Mapping::retuneMsFromIntensity(value));   // host automation
+        } else {
+            dial.beginGesture();                                             // mouse / wheel
+            dial.setIntensityFromUser(value);
+            dial.endGesture();
+        }
+        if (dial.pollParametersNow())                                        // the frame update
+            paintRegion(canvas, dial, dial.getLastDirtyArea());
+    };
+    const float stepSize = route == Route::wheel ? 0.5f : route == Route::drag ? 1.3f : 0.7f;
+    if (route == Route::click) {
+        step(target);
+    } else {
+        const int n = std::max(1, static_cast<int>(std::ceil(std::abs(target - start) / stepSize)));
+        for (int i = 1; i <= n; ++i) step(start + (target - start) * static_cast<float>(i) / static_cast<float>(n));
+    }
+    auto reference = fullRender(dial);
+    auto result = compareImages(canvas, reference);
+    result.composite = canvas;
+    result.reference = reference;
+    return result;
+}
+
+void testRepaintConsistency(const juce::File& shots, bool forceFull, bool verbose) {
+    std::cout << "Repaint consistency (" << (forceFull ? "forced full repaints" : "dirty-region repaints") << ")\n";
+    EvolutionVoxAudioProcessor p;
+    prepare(p, 48000.0, 512);
+    std::unique_ptr<juce::AudioProcessorEditor> base(p.createEditor());
+    auto* editor = dynamic_cast<EvolutionVoxAudioProcessorEditor*>(base.get());
+    auto& dial = editor->getDial();
+    dial.setForceFullRepaint(forceFull);
+    const float targets[] = { 0, 6, 12, 18, 25, 31, 37, 43, 50, 56, 62, 68, 75, 81, 87, 93, 100 };
+    int worstBad[4] {}, worstDiff[4] {};
+    for (float target : targets) {
+        for (auto route : { Route::click, Route::wheel, Route::drag, Route::automation }) {
+            const float start = route == Route::drag ? std::min(100.0f, target + 12.0f)
+                              : route == Route::click ? (target > 50.0f ? 0.0f : 100.0f)
+                              : std::max(0.0f, target - 12.0f);
+            auto r = reachAndCompare(p, dial, start, target, route);
+            const int i = static_cast<int>(route);
+            worstBad[i] = std::max(worstBad[i], r.badPixels);
+            worstDiff[i] = std::max(worstDiff[i], r.maxDiff);
+            if (verbose && shots != juce::File() && route == Route::wheel && target == 68.0f) {
+                juce::Image diff(juce::Image::RGB, r.composite.getWidth(), r.composite.getHeight(), true);
+                for (int y = 0; y < diff.getHeight(); ++y)
+                    for (int x = 0; x < diff.getWidth(); ++x) {
+                        const auto a = r.composite.getPixelAt(x, y), b = r.reference.getPixelAt(x, y);
+                        const int d = std::max({ std::abs(a.getRed() - b.getRed()), std::abs(a.getGreen() - b.getGreen()),
+                                                 std::abs(a.getBlue() - b.getBlue()) });
+                        diff.setPixelAt(x, y, d > 6 ? juce::Colours::red : b.withMultipliedBrightness(0.35f));
+                    }
+                writePng(diff, shots.getChildFile(juce::String(forceFull ? "full" : "dirty") + "_wheel68_diff.png"));
+                writePng(r.composite, shots.getChildFile(juce::String(forceFull ? "full" : "dirty") + "_wheel68_composite.png"));
+            }
+            if (verbose && r.badPixels > 0)
+                std::printf("    %-10s -> %5.1f%%: %6d stale pixels (max diff %d)\n", routeName(route), target, r.badPixels, r.maxDiff);
+            if (shots != juce::File() && (target == 37.0f || target == 62.0f || target == 87.0f)
+                && (route == Route::click || route == Route::wheel)) {
+                auto dir = shots.getChildFile("consistency");
+                dir.createDirectory();
+                writePng(r.composite, dir.getChildFile(juce::String(forceFull ? "full_" : "dirty_") + routeName(route) + "_"
+                                                       + juce::String(static_cast<int>(target)) + ".png"));
+            }
+        }
+    }
+    for (auto route : { Route::click, Route::wheel, Route::drag, Route::automation }) {
+        const int i = static_cast<int>(route);
+        check(worstBad[i] == 0, juce::String(routeName(route)) + ": identical to a full render at all 17 values (worst "
+                                + juce::String(worstBad[i]) + " stale pixels, max diff " + juce::String(worstDiff[i]) + ")");
+    }
+}
+
+// UI cost: idle polling must never repaint; a drag sweep repaints only small regions.
+void testUiCost() {
+    std::cout << "UI cost (software renderer, this machine)\n";
+    using Mapping = evolutionvox::ui::RetuneDialMapping;
+    EvolutionVoxAudioProcessor p;
+    prepare(p, 48000.0, 512);
+    std::unique_ptr<juce::AudioProcessorEditor> base(p.createEditor());
+    auto& dial = dynamic_cast<EvolutionVoxAudioProcessorEditor*>(base.get())->getDial();
+    setParam(p, "retune", Mapping::retuneMsFromIntensity(30.0f));
+    dial.syncFromParameters();
+    auto canvas = fullRender(dial);
+
+    const int before = dial.getRepaintRequestCount();
+    const auto t0 = std::chrono::steady_clock::now();
+    for (int i = 0; i < 10000; ++i) dial.pollParametersNow();
+    const double pollUs = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - t0).count() / 10000.0;
+    check(dial.getRepaintRequestCount() == before, "idle: no repaints while nothing changes");
+    std::printf("  idle poll: %.3f us per tick (15 Hz idle -> %.5f%% of one core)\n", pollUs, pollUs * 15.0 / 1.0e4);
+
+    // Drag sweep 30% -> 100% -> 0% at 0.5% per frame, rendering only the requested regions.
+    double renderMs = 0.0, areaFraction = 0.0;
+    int frames = 0, fullFrames = 0;
+    const double dialArea = static_cast<double>(dial.getWidth() * dial.getHeight());
+    auto frameTo = [&](float v) {
+        dial.setIntensityFromUser(v);
+        if (!dial.pollParametersNow()) return;
+        const auto area = dial.getLastDirtyArea();
+        const auto f0 = std::chrono::steady_clock::now();
+        paintRegion(canvas, dial, area);
+        renderMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - f0).count();
+        areaFraction += static_cast<double>(area.getWidth() * area.getHeight()) / dialArea;
+        if (area == dial.getLocalBounds()) ++fullFrames;
+        ++frames;
+    };
+    dial.beginGesture();
+    for (float v = 30.0f; v <= 100.0f; v += 0.5f) frameTo(v);
+    for (float v = 100.0f; v >= 0.0f; v -= 0.5f) frameTo(v);
+    dial.endGesture();
+    const double perFrame = renderMs / std::max(1, frames);
+    std::printf("  drag: %d frames, %.2f ms render per frame, avg dirty area %.0f%% of the dial, %d full-dial frames (pose changes)\n",
+                frames, perFrame, 100.0 * areaFraction / std::max(1, frames), fullFrames);
+    std::printf("  drag at 60 fps -> ~%.1f%% of one core for rendering (software renderer upper bound)\n", perFrame * 60.0 / 10.0);
+    check(perFrame < 8.0, "drag frames render well inside a 60 fps budget");
+}
 } // namespace
 
 int main(int argc, char** argv) {
     juce::ScopedJuceInitialiser_GUI gui;
     juce::File shots;
-    bool bench = false;
+    bool bench = false, repaintExperiment = false;
     for (int i = 1; i < argc; ++i) {
         const juce::String arg(argv[i]);
         if (arg == "--screenshots" && i + 1 < argc) {
@@ -298,6 +465,8 @@ int main(int argc, char** argv) {
             shots.createDirectory();
         } else if (arg == "--bench") {
             bench = true;
+        } else if (arg == "--repaint-experiment") {
+            repaintExperiment = true;
         }
     }
     testParameters();
@@ -305,6 +474,9 @@ int main(int argc, char** argv) {
     testPowerAndBypass();
     testKeyScaleReachDsp();
     testEditor(shots);
+    if (repaintExperiment) testRepaintConsistency(shots, true, true);
+    testRepaintConsistency(shots, false, repaintExperiment);
+    testUiCost();
     if (bench) benchmark();
     std::cout << (failures == 0 ? "All plugin tests passed\n" : juce::String(failures) + " plugin test(s) FAILED\n");
     return failures == 0 ? 0 : 1;

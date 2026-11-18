@@ -9,6 +9,13 @@ namespace theme = evolutionvox::ui::theme;
 constexpr float kArcMarginCanvas = 48.0f;      // room for meter glow and the tip spark around the arc
 constexpr int kTicks = 54;
 
+// Lightning colours (outer amber edge -> gold body -> pale gold -> white-hot core).
+const juce::Colour boltEdge  { 0xffa85a0a };
+const juce::Colour boltOuter { 0xffc8761a };
+const juce::Colour boltBody  { 0xfff0aa28 };
+const juce::Colour boltInner { 0xffffdc6c };
+const juce::Colour boltCore  { 0xfffff8e0 };
+
 juce::Image loadResource(const juce::String& name) {
     int size = 0;
     if (const char* data = BinaryData::getNamedResource(name.toRawUTF8(), size))
@@ -26,7 +33,7 @@ class DialValueInterface final : public juce::AccessibilityValueInterface {
 public:
     explicit DialValueInterface(LightningRetuneDial& d) : dial(d) {}
     bool isReadOnly() const override { return false; }
-    double getCurrentValue() const override { return dial.getIntensity(); }
+    double getCurrentValue() const override { return dial.parameterIntensity(); }
     void setValue(double v) override {
         dial.beginGesture();
         dial.setIntensityFromUser(static_cast<float>(v));
@@ -34,7 +41,7 @@ public:
     }
     juce::String getCurrentValueAsString() const override {
         // Accessibility/automation readout may be numeric (ms); the visual knob shows no number.
-        return juce::String(Mapping::retuneMsFromIntensity(dial.getIntensity()), 1) + " ms retune speed";
+        return juce::String(Mapping::retuneMsFromIntensity(dial.parameterIntensity()), 1) + " ms retune speed";
     }
     void setValueAsString(const juce::String& text) override { setValue(text.getDoubleValue()); }
     AccessibleValueRange getRange() const override { return { { 0.0, 100.0 }, 1.0 }; }
@@ -52,11 +59,11 @@ LightningRetuneDial::LightningRetuneDial(juce::AudioProcessorValueTreeState& sta
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
     setTitle("Retune");
-    setDescription("Zeus's lightning sets the retune speed: Natural (left) to Hard Tune (right).");
+    setDescription("Zeus's lightning sets the retune speed: Natural (bottom) to Hard Tune (right).");
     setTooltip("Drag the lightning around the gold arc (or drag Zeus up/down). Double-click to reset.");
     syncFromParameters();
-    ensureLoaded(poseIndex);  // the visible pose is ready before the first paint
-    startTimerHz(30);         // UI-thread poll of two atomics; repaint only on change
+    ensureLoaded(poseIndex);   // the visible pose is ready before the first paint
+    setFrameRate(idleFrameRateHz);
 }
 
 LightningRetuneDial::~LightningRetuneDial() {
@@ -87,7 +94,7 @@ void LightningRetuneDial::resized() {
     sceneScale = static_cast<float>(getWidth()) / (b.x1 - b.x0);
     cachedPhysicalScale = 0.0f;   // force rescale of cached layers on next paint
     trackCache = {};
-    for (auto& a : art) a.base.scaled = a.arm.scaled = a.bolt.scaled = {};
+    for (auto& a : art) a.base.scaled = a.arm.scaled = {};
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -99,15 +106,13 @@ void LightningRetuneDial::ensureLoaded(int pose) {
     const auto n = juce::String(pose + 1).paddedLeft('0', 2);
     a.base.source = loadResource("pose_" + n + "_base_png");
     a.arm.source = loadResource("pose_" + n + "_arm_png");
-    a.bolt.source = loadResource("bolt_" + n + "_png");
     a.loaded = true;
 }
 
 void LightningRetuneDial::ensureScaled(int pose, float physicalScale) {
     ensureLoaded(pose);
     const float k = sceneScale * physicalScale;
-    for (auto* layer : { &art[static_cast<size_t>(pose)].base, &art[static_cast<size_t>(pose)].arm,
-                         &art[static_cast<size_t>(pose)].bolt }) {
+    for (auto* layer : { &art[static_cast<size_t>(pose)].base, &art[static_cast<size_t>(pose)].arm }) {
         if (layer->scaled.isValid() || !layer->source.isValid()) continue;
         const int w = std::max(1, juce::roundToInt(static_cast<float>(layer->source.getWidth()) * k));
         const int h = std::max(1, juce::roundToInt(static_cast<float>(layer->source.getHeight()) * k));
@@ -166,15 +171,14 @@ void LightningRetuneDial::rebuildTrackCache(float physicalScale) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Painting
+// Painting. Every layer depends only on the current state (never on what was drawn before or on
+// where a repaint region starts), so a partial repaint is identical to a full one.
 
 void LightningRetuneDial::drawLitMeter(juce::Graphics& g, float value) const {
     const auto c = dialCentreLocal();
     const float r = dialRadiusLocal(), t = meterThickness();
     const auto endPoint = z::meterPoint(value);
     const auto tip = canvasToLocal(endPoint.x, endPoint.y);
-    const auto startPoint = z::meterPoint(0.0f);
-    const auto start = canvasToLocal(startPoint.x, startPoint.y);
 
     if (value > 0.05f) {
         juce::Path lit;
@@ -184,16 +188,18 @@ void LightningRetuneDial::drawLitMeter(juce::Graphics& g, float value) const {
         g.strokePath(lit, juce::PathStrokeType(t * 2.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         g.setColour(glowColour.withAlpha(powerOn ? 0.26f : 0.12f));
         g.strokePath(lit, juce::PathStrokeType(t * 1.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-        if (powerOn)
-            g.setGradientFill(juce::ColourGradient(theme::goldDeep, start.x, start.y, theme::goldBright, tip.x, tip.y, false));
-        else
+        if (powerOn) {
+            // Fixed gradient across the whole dial (deep gold lower-left -> bright upper-right). It
+            // must NOT depend on the tip position, or regions outside a partial repaint go stale.
+            g.setGradientFill(juce::ColourGradient(theme::goldDeep, c.x - r, c.y + r, theme::goldBright, c.x + r, c.y - r, false));
+        } else {
             g.setColour(theme::champagne.darker(0.15f));
+        }
         g.strokePath(lit, juce::PathStrokeType(t, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         g.setColour(juce::Colours::white.withAlpha(powerOn ? 0.55f : 0.35f));
         g.strokePath(lit, juce::PathStrokeType(t * 0.26f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded),
                      juce::AffineTransform::translation(0.0f, -t * 0.16f));
 
-        // lit ticks
         g.setColour(powerOn ? theme::goldDeep : theme::brass.withAlpha(0.5f));
         for (int i = 0; i <= kTicks; ++i) {
             const float v = 100.0f * static_cast<float>(i) / kTicks;
@@ -216,13 +222,48 @@ void LightningRetuneDial::drawLitMeter(juce::Graphics& g, float value) const {
     }
 }
 
+void LightningRetuneDial::drawBolt(juce::Graphics& g) const {
+    const auto geometry = z::boltGeometry(poseIndex, intensity);
+    const auto toLocal = canvasToLocalTransform();
+    auto shape = [&](float widthFraction) {
+        const auto outline = z::boltOutline(geometry, z::boltWidth * widthFraction);
+        juce::Path p;
+        p.startNewSubPath(outline[0].x, outline[0].y);
+        for (size_t i = 1; i < outline.size(); ++i) p.lineTo(outline[i].x, outline[i].y);
+        p.closeSubPath();
+        p.applyTransform(toLocal);
+        return p;
+    };
+    const float a = powerOn ? 1.0f : 0.42f;
+    const auto outer = shape(1.0f);
+    const juce::PathStrokeType glowStroke(z::boltGlowWidth * sceneScale, juce::PathStrokeType::curved,
+                                          juce::PathStrokeType::rounded);
+    if (powerOn) {
+        g.setColour(theme::goldBright.withAlpha(0.16f));
+        g.strokePath(outer, glowStroke);
+        g.setColour(theme::goldBright.withAlpha(0.20f));
+        g.strokePath(outer, juce::PathStrokeType(z::boltGlowWidth * 0.5f * sceneScale, juce::PathStrokeType::curved,
+                                                 juce::PathStrokeType::rounded));
+    }
+    g.setColour(boltOuter.withMultipliedAlpha(a));
+    g.fillPath(outer);
+    g.setColour(boltEdge.withMultipliedAlpha(0.7f * a));
+    g.strokePath(outer, juce::PathStrokeType(std::max(0.8f, 1.1f * sceneScale), juce::PathStrokeType::mitered));
+    g.setColour(boltBody.withMultipliedAlpha(a));
+    g.fillPath(shape(0.74f));
+    g.setColour(boltInner.withMultipliedAlpha(a));
+    g.fillPath(shape(0.46f));
+    g.setColour(boltCore.withMultipliedAlpha(a));
+    g.fillPath(shape(0.19f));
+}
+
 void LightningRetuneDial::paint(juce::Graphics& g) {
     if (getWidth() <= 0 || getHeight() <= 0) return;
     const float physical = std::max(1.0f, g.getInternalContext().getPhysicalPixelScaleFactor());
     if (!juce::approximatelyEqual(physical, cachedPhysicalScale)) {
         cachedPhysicalScale = physical;
         trackCache = {};
-        for (auto& a : art) a.base.scaled = a.arm.scaled = a.bolt.scaled = {};
+        for (auto& a : art) a.base.scaled = a.arm.scaled = {};
     }
     if (!trackCache.isValid()) rebuildTrackCache(physical);
 
@@ -236,69 +277,68 @@ void LightningRetuneDial::paint(juce::Graphics& g) {
     const float alpha = powerOn ? 1.0f : 0.55f;
 
     // Pre-scaled sprites drawn on exact device pixels: a straight blit, no per-frame resampling.
-    auto blit = [&](const juce::Image& img, const z::Rect& r, float opacity) {
+    auto blit = [&](const juce::Image& img, const z::Rect& r) {
         if (!img.isValid()) return;
         const auto p = canvasToLocal(static_cast<float>(r.x), static_cast<float>(r.y));
         const float x = std::round(p.x * physical) / physical, y = std::round(p.y * physical) / physical;
-        g.setOpacity(opacity);
+        g.setOpacity(alpha);
         g.drawImageTransformed(img, toDevice.translated(x, y));
+        g.setOpacity(1.0f);
     };
 
-    blit(a.base.scaled, pose.base, alpha);
-
-    if (a.bolt.scaled.isValid()) {
-        // Only the bolt is resampled per frame (small image, medium quality).
-        const auto bt = z::boltTransform(poseIndex, intensity);
-        const float kb = static_cast<float>(a.bolt.scaled.getWidth()) / static_cast<float>(a.bolt.source.getWidth());
-        const auto boltToLocal = juce::AffineTransform::scale(1.0f / kb)
-                                     .followedBy(juce::AffineTransform(bt.m00, bt.m01, bt.dx, bt.m10, bt.m11, bt.dy))
-                                     .followedBy(canvasToLocalTransform());
-        g.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
-        g.setOpacity(powerOn ? 1.0f : 0.4f);
-        g.drawImageTransformed(a.bolt.scaled, boltToLocal);
-    }
-
-    blit(a.arm.scaled, pose.arm, alpha);  // fist over the bolt's grip
-    g.setOpacity(1.0f);
+    blit(a.base.scaled, pose.base);
+    drawBolt(g);                    // vector lightning: crisp at any angle, length and scale
+    blit(a.arm.scaled, pose.arm);   // fist over the bolt's grip
 }
 
-juce::Rectangle<float> LightningRetuneDial::dirtyAreaFor(float value, int pose) const {
-    const auto bt = z::boltTransform(pose, value);
-    const auto& r = z::poses[static_cast<size_t>(pose)].bolt;
-    juce::Rectangle<float> area;
-    for (const auto corner : { z::Point{ 0.0f, 0.0f }, z::Point{ static_cast<float>(r.w), 0.0f },
-                               z::Point{ 0.0f, static_cast<float>(r.h) },
-                               z::Point{ static_cast<float>(r.w), static_cast<float>(r.h) } }) {
-        const auto p = bt.apply(corner);
-        const auto lp = canvasToLocal(p.x, p.y);
-        area = area.isEmpty() ? juce::Rectangle<float>(lp, lp) : area.getUnion(juce::Rectangle<float>(lp, lp));
+// ---------------------------------------------------------------------------------------------
+// Dirty regions
+
+juce::Rectangle<float> LightningRetuneDial::boltAreaFor(float value, int pose) const {
+    const auto outline = z::boltOutline(z::boltGeometry(pose, value), z::boltWidth);
+    std::array<juce::Point<float>, z::boltOutlinePoints> local;
+    for (size_t i = 0; i < outline.size(); ++i) local[i] = canvasToLocal(outline[i].x, outline[i].y);
+    return juce::Rectangle<float>::findAreaContainingPoints(local.data(), static_cast<int>(local.size()))
+        .expanded(z::boltGlowWidth * 0.5f * sceneScale + 2.0f);
+}
+
+juce::Rectangle<float> LightningRetuneDial::meterAreaBetween(float a, float b) const {
+    constexpr int samples = 24;
+    std::array<juce::Point<float>, samples + 1> pts;
+    for (int i = 0; i <= samples; ++i) {
+        const auto p = z::meterPoint(a + (b - a) * static_cast<float>(i) / samples);
+        pts[static_cast<size_t>(i)] = canvasToLocal(p.x, p.y);
     }
-    return area.expanded(4.0f);
+    // glow (1.3 t), spark (1.7 t), lit ticks (2.5 t inward) around the changed segment
+    return juce::Rectangle<float>::findAreaContainingPoints(pts.data(), static_cast<int>(pts.size()))
+        .expanded(meterThickness() * 2.8f + 2.0f);
 }
 
 void LightningRetuneDial::applyState(float newIntensity, bool newPower, bool force) {
     newIntensity = Mapping::clampIntensity(newIntensity);
     const int newPose = z::poseForIntensity(newIntensity, poseIndex);
-    const bool full = force || newPower != powerOn || newPose != poseIndex;
+    const bool full = force || forceFullRepaint || newPower != powerOn || newPose != poseIndex;
     if (!full && std::abs(newIntensity - intensity) < 1.0e-4f) return;
 
     juce::Rectangle<float> dirty;
-    if (!full) {
-        dirty = dirtyAreaFor(intensity, poseIndex).getUnion(dirtyAreaFor(newIntensity, newPose));
-        // the meter segment between the old and new value (+ glow, ticks and spark)
-        const float lo = std::min(intensity, newIntensity), hi = std::max(intensity, newIntensity);
-        for (int i = 0; i <= 12; ++i) {
-            const auto p = z::meterPoint(lo + (hi - lo) * static_cast<float>(i) / 12.0f);
-            const auto lp = canvasToLocal(p.x, p.y);
-            dirty = dirty.getUnion(juce::Rectangle<float>(lp, lp).expanded(meterThickness() * 2.8f));
-        }
-    }
+    if (!full)
+        dirty = boltAreaFor(intensity, poseIndex)
+                    .getUnion(boltAreaFor(newIntensity, newPose))
+                    .getUnion(meterAreaBetween(intensity, newIntensity));
     intensity = newIntensity;
     poseIndex = newPose;
     powerOn = newPower;
     ++repaintRequests;
-    if (full) repaint();
-    else repaint(dirty.getSmallestIntegerContainer());
+    lastDirtyArea = full ? getLocalBounds() : dirty.getSmallestIntegerContainer().getIntersection(getLocalBounds());
+    repaint(lastDirtyArea);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Frame updates: every input only changes the parameter; this is the one place the picture
+// follows it, at most activeFrameRateHz times per second.
+
+float LightningRetuneDial::parameterIntensity() const noexcept {
+    return Mapping::intensityFromRetuneMs(retuneValue->load(std::memory_order_relaxed));
 }
 
 void LightningRetuneDial::syncFromParameters() {
@@ -307,15 +347,37 @@ void LightningRetuneDial::syncFromParameters() {
     applyState(Mapping::intensityFromRetuneMs(lastRetuneMs), power, true);
 }
 
-void LightningRetuneDial::timerCallback() {
+bool LightningRetuneDial::pollParametersNow() {
     const float ms = retuneValue->load(std::memory_order_relaxed);
     const bool power = powerValue->load(std::memory_order_relaxed) >= 0.5f;
-    if (std::abs(ms - lastRetuneMs) > 1.0e-4f || power != powerOn) {
-        lastRetuneMs = ms;
-        applyState(Mapping::intensityFromRetuneMs(ms), power, false);
+    if (std::abs(ms - lastRetuneMs) <= 1.0e-5f && power == powerOn)
+        return false;
+    lastRetuneMs = ms;
+    applyState(Mapping::intensityFromRetuneMs(ms), power, false);
+    return true;
+}
+
+void LightningRetuneDial::setFrameRate(int hz) {
+    if (hz == frameRateHz) return;
+    frameRateHz = hz;
+    startTimerHz(hz);
+}
+
+void LightningRetuneDial::markActive() {
+    lastActivitySeconds = juce::Time::getMillisecondCounterHiRes() * 0.001;
+    setFrameRate(activeFrameRateHz);
+}
+
+void LightningRetuneDial::timerCallback() {
+    if (pollParametersNow()) {
+        markActive();   // automation or user input is moving: switch to smooth frame rate
+        return;
     }
-    // Spread decoding/scaling of the other poses over idle ticks so the first sweep never stalls.
-    if (nextToPrefetch < z::numPoses) {
+    const double now = juce::Time::getMillisecondCounterHiRes() * 0.001;
+    if (frameRateHz == activeFrameRateHz && now - lastActivitySeconds > settleSeconds)
+        setFrameRate(idleFrameRateHz);
+    // While idle, spread decoding/scaling of the other poses over ticks so a sweep never stalls.
+    if (frameRateHz == idleFrameRateHz && nextToPrefetch < z::numPoses) {
         ensureLoaded(nextToPrefetch);
         if (cachedPhysicalScale > 0.0f) ensureScaled(nextToPrefetch, cachedPhysicalScale);
         ++nextToPrefetch;
@@ -353,11 +415,9 @@ void LightningRetuneDial::endGesture() {
 
 void LightningRetuneDial::setIntensityFromUser(float newIntensity) {
     if (retuneParameter == nullptr) return;
-    newIntensity = Mapping::clampIntensity(newIntensity);
-    const float ms = Mapping::retuneMsFromIntensity(newIntensity);
+    const float ms = Mapping::retuneMsFromIntensity(Mapping::clampIntensity(newIntensity));
     retuneParameter->setValueNotifyingHost(retuneParameter->convertTo0to1(ms));
-    lastRetuneMs = retuneValue->load(std::memory_order_relaxed);
-    applyState(Mapping::intensityFromRetuneMs(lastRetuneMs), powerOn, false);
+    markActive();   // the next frame draws it, exactly as for automation
 }
 
 void LightningRetuneDial::mouseDown(const juce::MouseEvent& e) {
@@ -369,7 +429,7 @@ void LightningRetuneDial::mouseDown(const juce::MouseEvent& e) {
         setIntensityFromUser(intensityFromLocalAngle(e.position));
     } else {
         dragMode = DragMode::relative;            // grabbed Zeus: drag up/down like a knob
-        dragStartIntensity = intensity;
+        dragStartIntensity = parameterIntensity();
         dragStartY = e.position.y;
     }
 }
@@ -394,20 +454,21 @@ void LightningRetuneDial::mouseDoubleClick(const juce::MouseEvent&) {
     beginGesture();
     retuneParameter->setValueNotifyingHost(retuneParameter->getDefaultValue());
     endGesture();
-    syncFromParameters();
+    markActive();
 }
 
 void LightningRetuneDial::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& wheel) {
     const float delta = (wheel.isReversed ? -wheel.deltaY : wheel.deltaY) * 12.0f;
     if (std::abs(delta) < 1.0e-4f) return;
     beginGesture();
-    setIntensityFromUser(intensity + delta);
+    // Accumulate from the parameter, not the drawn picture, so fast wheel events are never lost.
+    setIntensityFromUser(parameterIntensity() + delta);
     endGesture();
 }
 
 bool LightningRetuneDial::keyPressed(const juce::KeyPress& key) {
     const float step = key.getModifiers().isShiftDown() ? 0.25f : 1.0f;
-    float target = intensity;
+    float target = parameterIntensity();
     const int code = key.getKeyCode();
     if (code == juce::KeyPress::upKey || code == juce::KeyPress::rightKey) target += step;
     else if (code == juce::KeyPress::downKey || code == juce::KeyPress::leftKey) target -= step;

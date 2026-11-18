@@ -1,14 +1,19 @@
 #pragma once
-// Design V1 master control: Zeus + lightning-bolt pointer + 270-degree illuminated gold meter.
+// Design V1 master control: Zeus + vector lightning-bolt pointer + 270-degree illuminated meter.
 //
 // * Driven only by the existing "retune" parameter (0..250 ms) through RetuneDialMapping, so DAW
 //   automation, undo and project recall keep working. No new parameter, no percentage text.
-// * The bolt IS the pointer: ZeusRig computes a transform that pins its grip to the current pose's
-//   fist and its tip exactly onto the end of the gold fill.
-// * Performance: PNGs are decoded lazily (shared ImageCache, one decode per process), pre-scaled
-//   once per display scale, and drawn as 1:1 blits. The static track is cached. The component only
-//   repaints when the parameter value/power state changes, and then only the dirty region.
-//   Nothing here runs on the audio thread.
+// * The bolt IS the pointer: a vector shape from the current pose's fist to exactly the end of the
+//   gold fill (ZeusRig.h). It is never a stretched bitmap, so it stays crisp at any angle/scale.
+// * One update path for every input: mouse click/drag, wheel, keys, accessibility and DAW
+//   automation only set the parameter; the frame timer reads it and updates the picture. While
+//   something is moving the timer runs at 60 Hz (frame-limited); otherwise it idles at 15 Hz,
+//   polling two atomics and drawing nothing.
+// * Repaints cover exactly what changed (old + new bolt, changed meter segment); a pose or power
+//   change repaints the dial. Every layer is position-independent, so a partial repaint is
+//   pixel-identical to a full one (verified by EvolutionVoxPluginTests).
+// * PNGs decode lazily (shared ImageCache, once per process), are pre-scaled once per display
+//   scale and blitted 1:1; the static track is cached. Nothing here runs on the audio thread.
 #include "Theme.h"
 #include "ZeusRig.h"
 #include <array>
@@ -27,10 +32,17 @@ public:
 
     float getIntensity() const noexcept { return intensity; }
     int getPoseIndex() const noexcept { return poseIndex; }
-    // For tests/screenshots: read parameters now instead of waiting for the poll timer.
+    // Reads the parameters and repaints the whole dial (editor open, tests, screenshots).
     void syncFromParameters();
-    // Repaint instrumentation (perf measurements).
+    // The frame update: reads the parameters and repaints only what changed. Returns true if the
+    // picture changed. Called by the frame timer; public so tests can drive it deterministically.
+    bool pollParametersNow();
+
+    // Diagnostics (tests / perf measurements).
     int getRepaintRequestCount() const noexcept { return repaintRequests; }
+    juce::Rectangle<int> getLastDirtyArea() const noexcept { return lastDirtyArea; }
+    void setForceFullRepaint(bool shouldForce) noexcept { forceFullRepaint = shouldForce; }
+    int getCurrentFrameRateHz() const noexcept { return frameRateHz; }
 
     void paint(juce::Graphics&) override;
     void resized() override;
@@ -43,14 +55,21 @@ public:
     bool keyPressed(const juce::KeyPress&) override;
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
-    // Sends a new intensity to the host. Callers outside a drag should wrap it in a gesture.
+    // Sends a new intensity to the host (the picture follows on the next frame).
+    // Callers outside a drag should wrap it in begin/endGesture.
     void setIntensityFromUser(float newIntensity);
     void beginGesture();
     void endGesture();
+    // Intensity of the current parameter value (may be ahead of the drawn picture by < 1 frame).
+    float parameterIntensity() const noexcept;
 
 private:
     struct Layer { juce::Image source, scaled; };
-    struct PoseArt { Layer base, arm, bolt; bool loaded = false; };
+    struct PoseArt { Layer base, arm; bool loaded = false; };
+
+    static constexpr int activeFrameRateHz = 60;
+    static constexpr int idleFrameRateHz = 15;
+    static constexpr double settleSeconds = 0.4;
 
     juce::RangedAudioParameter* retuneParameter = nullptr;
     std::atomic<float>* retuneValue = nullptr;
@@ -72,19 +91,28 @@ private:
     float dragStartIntensity = 0.0f;
     float dragStartY = 0.0f;
     bool inGesture = false;
+
+    int frameRateHz = 0;
+    double lastActivitySeconds = 0.0;
     int repaintRequests = 0;
+    juce::Rectangle<int> lastDirtyArea;
+    bool forceFullRepaint = false;
 
     void timerCallback() override;
+    void setFrameRate(int hz);
+    void markActive();
     void ensureLoaded(int pose);
     void ensureScaled(int pose, float physicalScale);
     void rebuildTrackCache(float physicalScale);
     void applyState(float newIntensity, bool newPower, bool force);
-    juce::Rectangle<float> dirtyAreaFor(float value, int pose) const;
+    juce::Rectangle<float> boltAreaFor(float value, int pose) const;
+    juce::Rectangle<float> meterAreaBetween(float a, float b) const;
     juce::AffineTransform canvasToLocalTransform() const noexcept;
     juce::Point<float> dialCentreLocal() const noexcept;
     float dialRadiusLocal() const noexcept;
     float meterThickness() const noexcept { return dialRadiusLocal() * 0.052f; }
     void drawLitMeter(juce::Graphics&, float value) const;
+    void drawBolt(juce::Graphics&) const;
     float intensityFromLocalAngle(juce::Point<float>) const noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LightningRetuneDial)

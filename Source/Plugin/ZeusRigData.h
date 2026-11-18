@@ -8,29 +8,25 @@ namespace evolutionvox::ui::zeus {
 struct Rect { int x, y, w, h; };
 struct Point { float x, y; };
 struct Pose {
-    float intensity;     // nominal intensity this pose represents
-    Point fist;          // where the bolt is gripped (canvas)
-    Rect base, arm, bolt;  // placement of each cropped layer (canvas); bolt is in source coords
-    Point boltAnchor;    // grip end inside the cropped bolt image
-    Point boltTip;       // tip inside the cropped bolt image
+    float intensity;  // nominal intensity this pose represents
+    Point fist;       // where the lightning is gripped (canvas)
+    Rect base, arm;   // placement of the cropped body / active-arm layers (canvas)
 };
 
 constexpr float dialCentreX = 615.000f;
 constexpr float dialCentreY = 278.940f;
 constexpr float dialRadius = 450.000f;
-constexpr float boltUniformScaleMin = 0.800f;
-constexpr float boltUniformScaleMax = 1.250f;
 
 constexpr std::array<Pose, 9> poses {{
-    { 0.0f, {451.30f, 513.18f}, {337, 244, 371, 359}, {396, 327, 133, 210}, {435, 501, 138, 231}, {97.30f, 12.18f}, {24.28f, 212.80f} }, // 1 sleeping
-    { 12.0f, {434.32f, 450.96f}, {399, 189, 283, 414}, {410, 307, 111, 177}, {361, 438, 141, 238}, {99.32f, 12.96f}, {24.21f, 219.32f} }, // 2 waking
-    { 25.0f, {420.06f, 446.08f}, {404, 190, 285, 413}, {407, 308, 99, 183}, {319, 433, 142, 243}, {101.06f, 13.08f}, {24.28f, 224.02f} }, // 3 focused
-    { 37.0f, {440.48f, 219.16f}, {391, 208, 308, 395}, {408, 208, 120, 148}, {461, 19, 146, 217}, {33.48f, 200.16f}, {122.26f, 18.14f} }, // 4 lifting
-    { 50.0f, {453.74f, 209.40f}, {399, 183, 298, 420}, {435, 187, 111, 165}, {461, 19, 146, 217}, {33.48f, 200.16f}, {122.26f, 18.14f} }, // 5 raised
-    { 62.0f, {764.06f, 270.40f}, {385, 219, 417, 384}, {612, 243, 191, 127}, {702, 108, 226, 191}, {23.06f, 162.40f}, {205.72f, 19.69f} }, // 6 aiming
-    { 75.0f, {791.28f, 276.50f}, {372, 225, 444, 379}, {560, 254, 258, 148}, {778, 163, 311, 172}, {9.28f, 113.50f}, {279.61f, 65.83f} }, // 7 charging
-    { 87.0f, {812.08f, 276.50f}, {351, 197, 482, 407}, {604, 257, 233, 124}, {770, 168, 346, 169}, {5.08f, 108.50f}, {315.42f, 86.80f} }, // 8 striking
-    { 100.0f, {840.52f, 278.94f}, {348, 222, 499, 382}, {625, 264, 224, 112}, {774, 167, 419, 189}, {3.52f, 111.94f}, {387.82f, 111.94f} }, // 9 max_tune
+    { 0.0f, {451.30f, 513.18f}, {337, 244, 371, 359}, {397, 327, 132, 210} }, // 1 sleeping
+    { 12.0f, {434.32f, 450.96f}, {399, 189, 283, 414}, {410, 307, 111, 177} }, // 2 waking
+    { 25.0f, {420.06f, 446.08f}, {404, 190, 285, 413}, {407, 308, 99, 183} }, // 3 focused
+    { 37.0f, {440.48f, 219.16f}, {391, 208, 308, 395}, {408, 208, 120, 148} }, // 4 lifting
+    { 50.0f, {453.74f, 209.40f}, {399, 183, 298, 420}, {435, 187, 111, 165} }, // 5 raised
+    { 62.0f, {764.06f, 270.40f}, {385, 219, 417, 384}, {612, 243, 191, 126} }, // 6 aiming
+    { 75.0f, {791.28f, 276.50f}, {372, 225, 444, 379}, {560, 255, 258, 147} }, // 7 charging
+    { 87.0f, {812.08f, 276.50f}, {351, 197, 482, 407}, {604, 258, 233, 122} }, // 8 striking
+    { 100.0f, {840.52f, 278.94f}, {348, 222, 499, 382}, {625, 265, 224, 111} }, // 9 max_tune
 }};
 
 } // namespace evolutionvox::ui::zeus

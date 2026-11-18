@@ -8,9 +8,7 @@
   "dial": {
     "centreX": 615.0,
     "centreY": 278.94,
-    "radius": 450.0,
-    "uniformScaleMin": 0.8,
-    "uniformScaleMax": 1.25
+    "radius": 450.0
   },
   "poses": [
     {
@@ -31,31 +29,15 @@
       },
       "arm": {
         "file": "pose_01_arm.png",
-        "x": 396,
+        "x": 397,
         "y": 327,
-        "w": 133,
+        "w": 132,
         "h": 210
       },
-      "bolt": {
-        "file": "bolt_01.png",
-        "x": 435,
-        "y": 501,
-        "w": 138,
-        "h": 231
-      },
-      "boltAnchor": [
-        97.29999999999995,
-        12.17999999999995
-      ],
-      "boltTip": [
-        24.279999999999973,
-        212.79999999999995
-      ],
-      "boltSource": "lightning/independent/lightning_01.png",
       "cleanup": {
         "base_removed": [],
         "arm_removed": [],
-        "bolt_removed": []
+        "arm_matte_px": 196
       }
     },
     {
@@ -81,26 +63,10 @@
         "w": 111,
         "h": 177
       },
-      "bolt": {
-        "file": "bolt_02.png",
-        "x": 361,
-        "y": 438,
-        "w": 141,
-        "h": 238
-      },
-      "boltAnchor": [
-        99.32,
-        12.95999999999998
-      ],
-      "boltTip": [
-        24.20999999999998,
-        219.32000000000005
-      ],
-      "boltSource": "lightning/independent/lightning_02.png",
       "cleanup": {
         "base_removed": [],
         "arm_removed": [],
-        "bolt_removed": []
+        "arm_matte_px": 247
       }
     },
     {
@@ -126,26 +92,10 @@
         "w": 99,
         "h": 183
       },
-      "bolt": {
-        "file": "bolt_03.png",
-        "x": 319,
-        "y": 433,
-        "w": 142,
-        "h": 243
-      },
-      "boltAnchor": [
-        101.06,
-        13.079999999999984
-      ],
-      "boltTip": [
-        24.279999999999973,
-        224.01999999999998
-      ],
-      "boltSource": "lightning/independent/lightning_03.png",
       "cleanup": {
         "base_removed": [],
         "arm_removed": [],
-        "bolt_removed": []
+        "arm_matte_px": 399
       }
     },
     {
@@ -171,26 +121,10 @@
         "w": 120,
         "h": 148
       },
-      "bolt": {
-        "file": "bolt_04.png",
-        "x": 461,
-        "y": 19,
-        "w": 146,
-        "h": 217
-      },
-      "boltAnchor": [
-        33.48000000000002,
-        200.16
-      ],
-      "boltTip": [
-        122.25999999999999,
-        18.14
-      ],
-      "boltSource": "lightning/independent/lightning_04.png",
       "cleanup": {
         "base_removed": [],
         "arm_removed": [],
-        "bolt_removed": []
+        "arm_matte_px": 411
       }
     },
     {
@@ -216,26 +150,10 @@
         "w": 111,
         "h": 165
       },
-      "bolt": {
-        "file": "bolt_05.png",
-        "x": 461,
-        "y": 19,
-        "w": 146,
-        "h": 217
-      },
-      "boltAnchor": [
-        33.48000000000002,
-        200.16
-      ],
-      "boltTip": [
-        122.25999999999999,
-        18.14
-      ],
-      "boltSource": "lightning/independent/lightning_04.png",
       "cleanup": {
         "base_removed": [],
         "arm_removed": [],
-        "bolt_removed": []
+        "arm_matte_px": 655
       }
     },
     {
@@ -259,28 +177,12 @@
         "x": 612,
         "y": 243,
         "w": 191,
-        "h": 127
+        "h": 126
       },
-      "bolt": {
-        "file": "bolt_06.png",
-        "x": 702,
-        "y": 108,
-        "w": 226,
-        "h": 191
-      },
-      "boltAnchor": [
-        23.059999999999945,
-        162.39999999999998
-      ],
-      "boltTip": [
-        205.72000000000003,
-        19.689999999999998
-      ],
-      "boltSource": "lightning/independent/lightning_06.png",
       "cleanup": {
         "base_removed": [],
         "arm_removed": [],
-        "bolt_removed": []
+        "arm_matte_px": 864
       }
     },
     {
@@ -302,30 +204,14 @@
       "arm": {
         "file": "pose_07_arm.png",
         "x": 560,
-        "y": 254,
+        "y": 255,
         "w": 258,
-        "h": 148
+        "h": 147
       },
-      "bolt": {
-        "file": "bolt_07.png",
-        "x": 778,
-        "y": 163,
-        "w": 311,
-        "h": 172
-      },
-      "boltAnchor": [
-        9.279999999999973,
-        113.5
-      ],
-      "boltTip": [
-        279.6099999999999,
-        65.83000000000001
-      ],
-      "boltSource": "lightning/independent/lightning_07.png",
       "cleanup": {
         "base_removed": [],
         "arm_removed": [],
-        "bolt_removed": []
+        "arm_matte_px": 1150
       }
     },
     {
@@ -347,26 +233,10 @@
       "arm": {
         "file": "pose_08_arm.png",
         "x": 604,
-        "y": 257,
+        "y": 258,
         "w": 233,
-        "h": 124
+        "h": 122
       },
-      "bolt": {
-        "file": "bolt_08.png",
-        "x": 770,
-        "y": 168,
-        "w": 346,
-        "h": 169
-      },
-      "boltAnchor": [
-        5.080000000000041,
-        108.5
-      ],
-      "boltTip": [
-        315.4200000000001,
-        86.80000000000001
-      ],
-      "boltSource": "lightning/independent/lightning_08.png",
       "cleanup": {
         "base_removed": [
           [
@@ -385,7 +255,7 @@
           ]
         ],
         "arm_removed": [],
-        "bolt_removed": []
+        "arm_matte_px": 1068
       }
     },
     {
@@ -407,30 +277,14 @@
       "arm": {
         "file": "pose_09_arm.png",
         "x": 625,
-        "y": 264,
+        "y": 265,
         "w": 224,
-        "h": 112
+        "h": 111
       },
-      "bolt": {
-        "file": "bolt_09.png",
-        "x": 774,
-        "y": 167,
-        "w": 419,
-        "h": 189
-      },
-      "boltAnchor": [
-        3.519999999999982,
-        111.94
-      ],
-      "boltTip": [
-        387.81999999999994,
-        111.94
-      ],
-      "boltSource": "lightning/independent/lightning_09.png",
       "cleanup": {
         "base_removed": [],
         "arm_removed": [],
-        "bolt_removed": []
+        "arm_matte_px": 1042
       }
     }
   ]
